@@ -9,3 +9,9 @@
 01/21/2022 06:11:08 AM INFO: Player connected: player3
 01/21/2022 06:11:08 AM INFO: Connected by: ('127.0.0.1', 39704)
 01/21/2022 06:11:08 AM INFO: Player connected: player4
+01/21/2022 06:16:13 AM WARNING: Player disconnected: player4
+01/21/2022 06:16:13 AM WARNING: Player disconnected: player3
+01/21/2022 06:16:13 AM WARNING: Player disconnected: player2
+01/21/2022 06:16:13 AM WARNING: Player disconnected: player1
+01/21/2022 06:16:13 AM WARNING: Player disconnected: player0
+01/21/2022 06:16:13 AM INFO: Shutting down server
