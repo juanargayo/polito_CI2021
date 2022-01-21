@@ -40,7 +40,7 @@ def simulation():
             break
         print("![server]", line.strip().decode())
 
-        if(line.strip().decode().split()[0] == "Hanabi"):
+        if(status == statuses[0] and line.strip().decode().split()[0] == "Hanabi"):
             status = statuses[1]
             # Creating n_players sub_process
             for turn in range(players):
@@ -53,9 +53,11 @@ def simulation():
                 if status == statuses[1]:
                     time.sleep(0.1)
                     client_line = client_procs[turn].stdout.readline()
+
                     if not client_line:
                         break
-                    print(f"![client{turn}] {client_line.strip().decode()}")
+                    print(f"![client{turn}] {client_line}")
+                    client_procs[turn].stdout.flush()
                     ready += 1
                     if ready == players:
                         status = "ready"
