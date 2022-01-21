@@ -30,17 +30,19 @@ def simulation():
     server_proc = Popen(server_cmd.split(),
                         stdin=PIPE,
                         stdout=PIPE,
+                        universal_newlines=True
                         )
     status = "server"
     ready = 0
-    while True:
-        time.sleep(0.1)
+    end = False
+    while not end:
+        # time.sleep(0.1)
         line = server_proc.stdout.readline()
         if not line:
             break
-        print("![server]", line.strip().decode())
+        print("![server]", line.strip())
 
-        if(status == statuses[0] and line.strip().decode().split()[0] == "Hanabi"):
+        if(status == statuses[0] and line.strip().split()[0] == "Hanabi"):
             status = statuses[1]
             # Creating n_players sub_process
             for turn in range(players):
@@ -48,34 +50,62 @@ def simulation():
                 client_procs.append(Popen(client_cmd.split(),
                                           stdin=PIPE,
                                           stdout=PIPE,
+                                          universal_newlines=True
                                           ))
                 # I read a line from every client
                 if status == statuses[1]:
-                    time.sleep(0.1)
+                    # time.sleep(0.1)
                     client_line = client_procs[turn].stdout.readline()
-
                     if not client_line:
                         break
                     print(f"![client{turn}] {client_line}")
                     client_procs[turn].stdout.flush()
+
                     ready += 1
                     if ready == players:
                         status = "ready"
 
         if status == "ready":
             ready = 0
+            cmd_bytes = b'ready'
             for turn in range(players):
-                time.sleep(0.1)
-                client_procs[turn].stdin.write(b"ready")
+                # time.sleep(0.1)
+                client_procs[turn].stdin.write("ready\n")
+                client_procs[turn].stdin.flush()  # not necessary in this case
                 ready += 1
                 if ready == players:
-                    status = "game"
-        if status == "game":
+                    status = "game_start"
+        if status == "game_start":
             print("[MASTER]Let's play")
-            break
+
+            for turn in range(2*players):
+                # time.sleep(0.1)
+                line = client_procs[turn % players].stdout.readline()
+                client_procs[turn % players].stdout.flush()
+
+                if not line:
+                    break
+                print(f"[!client{turn%players}] {line}")
+
+                # client_procs[turn].stdin.write(play_cmd)
+                # client_procs[turn].stdin.flush()  # not necessary in this case
+
+                # print(stdout)
+            status = "play"
+        if status == "play":
+            print("PLAY")
+            play_cmd = "play 0\n"
+            for turn in range(players):
+                # time.sleep(0.1)
+                client_procs[turn].stdin.write(play_cmd)
+                client_procs[turn].stdin.flush()  # not necessary in this case
+                if turn == players-1:
+                    end = True
             #print("![client]", client_line2.strip().decode())
 
+    server_proc.stdin.write("exit\n")
     server_proc.wait()
+
     print("![test] server killed ")
 
 
