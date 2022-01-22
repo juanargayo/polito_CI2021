@@ -57,7 +57,7 @@ def simulation():
                     # time.sleep(0.1)
                     client_line = client_procs[turn].stdout.readline()
                     if not client_line:
-                        break
+                        continue
                     print(f"![client{turn}] {client_line}")
                     client_procs[turn].stdout.flush()
 
@@ -84,7 +84,7 @@ def simulation():
                 client_procs[turn % players].stdout.flush()
 
                 if not line:
-                    break
+                    continue
                 print(f"[!client{turn%players}] {line}")
 
                 # client_procs[turn].stdin.write(play_cmd)
@@ -97,15 +97,35 @@ def simulation():
             play_cmd = "play 0\n"
             for turn in range(players):
                 # time.sleep(0.1)
+
+                client_procs[turn].stdin.write("show")
+                client_procs[turn].stdin.flush()  # not necessary in this case
+                time.sleep(1)
+
+                print(turn, client_procs[turn].stdout.readline())
+
                 client_procs[turn].stdin.write(play_cmd)
                 client_procs[turn].stdin.flush()  # not necessary in this case
+
+                move_response = client_procs[turn].stdout.readline()
+                if move_response.split()[3] == "OH":
+                    print("It was bad move")
+                else:
+                    print("It was a good move")
+
                 if turn == players-1:
                     end = True
             #print("![client]", client_line2.strip().decode())
 
-    server_proc.stdin.write("exit\n")
-    server_proc.wait()
+    time.sleep(3)
+    server_proc.stdin.close()
+    server_proc.terminate()
+    server_proc.wait(0.2)
 
+    for i in range(players):
+        client_procs[i].stdin.close()
+        client_procs[i].terminate()
+        client_procs[i].wait(0.2)
     print("![test] server killed ")
 
 
