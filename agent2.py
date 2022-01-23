@@ -23,9 +23,8 @@ def managePlay(playerName: str):
     print(f"managePlay: thread+ {playerName[-1]}")
 
 
-def manageServerResp(playerName: str, s):
+def manageServerResp(playerName: str, s: socket):
     print("manageServerResp: thread"+playerName[-1])
-    Thread(target=managePlay, args=(playerName, )).start()
 
     while run:
         dataOk = False
@@ -106,25 +105,34 @@ def manageServerResp(playerName: str, s):
 
 def main():
     global status
-    numPlayers = 3
+    numPlayers = 8
+    serverResponseThreads = []
+    clientPlayThreads = []
     print("start simulation")
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((HOST, PORT))
-        for client in range(numPlayers):
-            playerName = "player" + str(client)
-            print(f"main: {playerName}")
-            request = GameData.ClientPlayerAddData(playerName)
-            s.send(request.serialize())
-            data = s.recv(DATASIZE)
-            data = GameData.GameData.deserialize(data)
-            if type(data) is GameData.ServerPlayerConnectionOk:
-                print("Connection accepted by the server. Welcome " + playerName)
-                print("[" + playerName + " - " + status + "]: ", end="")
-            serv = Thread(target=manageServerResp, args=(playerName, s))
-            serv.start()
-        while True:
-            print(".", end="")
-            time.sleep(2)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((HOST, PORT))
+    for client in range(numPlayers):
+        playerName = "player" + str(client)
+        print(f"main: {playerName}")
+
+        request = GameData.ClientPlayerAddData(playerName)
+        s.send(request.serialize())
+        data = s.recv(DATASIZE)
+        data = GameData.GameData.deserialize(data)
+        if type(data) is GameData.ServerPlayerConnectionOk:
+            print("Connection accepted by the server. Welcome " + playerName)
+            print("[" + playerName + " - " + status + "]: ", end="")
+            serverResponseThreads.append(Thread(target=manageServerResp, args=(
+                "player" + str(client), s, )))
+            clientPlayThreads.append(
+                Thread(target=managePlay, args=("player" + str(client), )))
+
+    for client in range(numPlayers):
+        serverResponseThreads[client].start()
+        clientPlayThreads[client].start()
+
+        serverResponseThreads[client].join()
+        clientPlayThreads[client].join()
 
 
 if (__name__ == "__main__"):
