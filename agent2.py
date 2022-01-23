@@ -1,3 +1,4 @@
+from os import stat
 import socket
 from sys import stdout
 from threading import Thread
@@ -12,18 +13,35 @@ PORT = 1024
 
 run = True
 
+numPlayers = 3
+
 statuses = ["Lobby", "Game", "GameHint"]
 
-status = statuses[0]
+status = [statuses[0]]*numPlayers
 
 hintState = ("", "")
 
+plays = [0]*numPlayers #just to debug
 
-def managePlay(playerName: str):
+
+def managePlay(playerName: str, s: socket):
+    global plays
+    global status
     print(f"managePlay: thread+ {playerName[-1]}")
+    s.send(GameData.ClientPlayerStartRequest(playerName).serialize())
+    print(f"Sent Ready request thread+ {playerName[-1]}")
+    while True and plays[1]<5:
+        if all(x==statuses[1] for x in status):
+            print(F"ENTERS IF THREAD{playerName[-1]}")
+            cardOrder = 0
+            s.send(GameData.ClientPlayerPlayCardRequest(playerName, cardOrder).serialize())
+            plays[int(playerName[-1])] += 1 
+            print(f"THREAD {playerName[-1]} PLAYED {plays[int(playerName[-1])]}th time")
+
 
 
 def manageServerResp(playerName: str, s: socket):
+    global status
     print("manageServerResp: thread"+playerName[-1])
 
     while run:
@@ -43,7 +61,8 @@ def manageServerResp(playerName: str, s: socket):
             print("Game start!")
             s.send(GameData.ClientPlayerReadyData(
                 playerName).serialize())
-            status = statuses[1]
+            status[int(playerName[-1])] = statuses[1]
+            print(f"the STATUS array: {status}")
         if type(data) is GameData.ServerGameStateData:
             dataOk = True
             print("Current player: " + data.currentPlayer)
@@ -105,13 +124,16 @@ def manageServerResp(playerName: str, s: socket):
 
 def main():
     global status
-    numPlayers = 8
+    global numPlayers
+    numPlayers = 3
     serverResponseThreads = []
     clientPlayThreads = []
     print("start simulation")
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((HOST, PORT))
+    """ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((HOST, PORT)) """
     for client in range(numPlayers):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((HOST, PORT))
         playerName = "player" + str(client)
         print(f"main: {playerName}")
 
@@ -121,18 +143,18 @@ def main():
         data = GameData.GameData.deserialize(data)
         if type(data) is GameData.ServerPlayerConnectionOk:
             print("Connection accepted by the server. Welcome " + playerName)
-            print("[" + playerName + " - " + status + "]: ", end="")
+            print("[" + playerName + " - " + status[client] + "]: ", end="")
             serverResponseThreads.append(Thread(target=manageServerResp, args=(
                 "player" + str(client), s, )))
             clientPlayThreads.append(
-                Thread(target=managePlay, args=("player" + str(client), )))
+                Thread(target=managePlay, args=("player" + str(client), s, )))
 
     for client in range(numPlayers):
         serverResponseThreads[client].start()
         clientPlayThreads[client].start()
 
-        serverResponseThreads[client].join()
-        clientPlayThreads[client].join()
+        #serverResponseThreads[client].join()
+        #clientPlayThreads[client].join()
 
 
 if (__name__ == "__main__"):
