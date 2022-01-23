@@ -3,6 +3,7 @@ from sys import stdout
 from threading import Thread
 from unittest.result import STDOUT_LINE
 import GameData
+import time
 from constants import DATASIZE
 
 HOST = ''
@@ -19,10 +20,11 @@ hintState = ("", "")
 
 
 def managePlay(playerName: str):
-    print(f"Thread: managePlay: {playerName}")
+    print(f"managePlay: thread+ {playerName[-1]}")
 
 
 def manageServerResp(playerName: str, s):
+    print("manageServerResp: thread"+playerName[-1])
     Thread(target=managePlay, args=(playerName, )).start()
 
     while run:
@@ -104,11 +106,10 @@ def manageServerResp(playerName: str, s):
 
 def main():
     global status
-    numPlayers = 2
+    numPlayers = 3
     print("start simulation")
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((HOST, PORT))
-
         for client in range(numPlayers):
             playerName = "player" + str(client)
             print(f"main: {playerName}")
@@ -121,7 +122,9 @@ def main():
                 print("[" + playerName + " - " + status + "]: ", end="")
             serv = Thread(target=manageServerResp, args=(playerName, s))
             serv.start()
-            print("thread launched")
+        while True:
+            print(".", end="")
+            time.sleep(2)
 
 
 if (__name__ == "__main__"):
