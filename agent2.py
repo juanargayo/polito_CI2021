@@ -197,11 +197,12 @@ def main():
     game = readGame(numPlayers, clientSockets)
 
     players = game.players
-    print(players[0].name)
+    print(players[1].name)
 
     player = players[1]
-    print(player.hand[0].toString())
-    print()
+    for card in range(len(player.hand)):
+        print(player.hand[card].toString())
+        print()
 
     # init card_infos => !!! to update on hint or play or discard
     for player in players:
@@ -220,6 +221,8 @@ def main():
         for client in range(numPlayers):
             playerName = "player" + str(client)
             s = clientSockets[client]
+
+            print(f"\nfor cycle of player{str(client)}\n")
 
             #commandShow(playerName, s)
 
@@ -256,16 +259,17 @@ def main():
                 # 1. send a request
 
                 cardPos = 0
-                typ = "value"
+                typ = "color"
                 dest = "player1"
 
                 # value = ? => Find value of the first card of player1
-                value = players[1].hand[0].value
+                value = players[1].hand[0].color
 
                 # Debug purpose
                 if playerName == "player1":
                     continue
 
+                
                 # Source Hint
                 s.send(GameData.ClientHintData(
                     playerName, dest, typ, value).serialize())
@@ -281,6 +285,19 @@ def main():
                       " cards with value " + str(data.value) + " are:")
                 for i in data.positions:
                     print("\t" + str(i))
+                
+                for i in data.positions:
+                    if data.type == "value":
+                        hintTable[int(data.destination[-1:])].directHintValue(i)
+                    elif data.type == "color":
+                        hintTable[int(data.destination[-1:])].directHintColor(i)
+                    else:
+                        print("ERROR: Wrong hint type")
+
+                #Just for testing
+                print("\nHINT TABLE (after update):")
+                print(f"values: {hintTable[int(data.destination[-1:])].values}")
+                print(f"colors: {hintTable[int(data.destination[-1:])].colors}\n")
 
                 # Dest Hint (Other data is sent from server)
                 if playerName == "player0":
@@ -302,6 +319,9 @@ def main():
 
 
                 time.sleep(3)
+
+            #elif move == "discard":
+                #Yet to implement. We have to be aware of many things, e.g. when getting the new card, updating the hint table.
 
         time.sleep(1)
 
