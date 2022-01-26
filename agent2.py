@@ -224,7 +224,7 @@ def main():
 
             print(f"\nfor cycle of player{str(client)}\n")
 
-            #commandShow(playerName, s)
+            #commandShow("player0", s)
 
             # 1. think a move
             move = "hint"
@@ -299,7 +299,7 @@ def main():
                 print(f"values: {hintTable[int(data.destination[-1:])].values}")
                 print(f"colors: {hintTable[int(data.destination[-1:])].colors}\n")
 
-                # Dest Hint (Other data is sent from server)
+                # Dest Hint (Other data is sent from server) ///// Could we not print it?
                 if playerName == "player0":
                     s = clientSockets[1]
                     data = s.recv(DATASIZE)
@@ -313,15 +313,16 @@ def main():
                     for i in data.positions:
                         print("\t" + str(i))
                 
-                #2. Put hint info in HINT TABLE
-                #3. Check if token is correctly decreasing
-                #4. Remember to update info after play or discard
+                #2. Put hint info in HINT TABLE (done)
+                #3. Check if token is correctly decreasing (done)
+                #4. Remember to update info after play or discard (to do) 
 
 
                 time.sleep(3)
 
             #elif move == "discard":
                 #Yet to implement. We have to be aware of many things, e.g. when getting the new card, updating the hint table.
+            
 
         time.sleep(1)
 
