@@ -3,7 +3,7 @@ import socket
 from sys import stdout
 from threading import Thread
 from unittest.result import STDOUT_LINE
-
+import numpy as np
 from numpy import nancumsum
 import GameData
 import time
@@ -155,6 +155,18 @@ def commandPlay(cardPos: int, playerName: str, s: socket):
             print("Note tokens used: " + str(data.usedNoteTokens) + "/8")
             print("Storm tokens used: " + str(data.usedStormTokens) + "/3")
 
+def playIfCertain(playerNum: int, hintTable):
+    for slot in range(getNumSlots(numPlayers)):    #ok to import them? is there a better way?        
+
+        if(hintTable[slot].values.items())
+        for (k1, v1), (k2, v2) in zip(hintTable[slot].values.items(), hintTable[slot].colors.items()):
+            #print(f"{k1} -> {v1} type {type(v1)}")
+            #print(f"{k2} -> {v2} type {type(v2)}")
+            if(v1==1 & v2==1):
+                print(f"For slot number {slot}:")
+                print(f"k1: {k1} and k2: {k2}")
+
+    return None
 
 run = True
 
@@ -169,8 +181,8 @@ hintState = ("", "")
 plays = [0]  # just to debug
 
 cards = []
-hintTable = []
 
+hintTable = [[0 for x in range(getNumSlots(numPlayers))] for y in range(numPlayers)] #Array of shape H=[#Players][#Slots]
 
 def main():
     global status
@@ -205,12 +217,14 @@ def main():
         print()
 
     # init card_infos => !!! to update on hint or play or discard
-    for player in players:
-        hintTable.append(CardHints(slots))
+    for p in range(len(players)):
+        for slot in range(getNumSlots(numPlayers)):
+            hintTable[p][slot] = CardHints(slots)
 
-    print("HINT TABLE:")
-    print(hintTable[0].values)
-    print(hintTable[0].colors)
+    print("HINT TABLE player0:")
+    for slot in range(getNumSlots(numPlayers)):
+        print(hintTable[0][slot].values)
+        print(hintTable[0][slot].colors)
 
     # init table_cards = {}
     # init scarti = {}
@@ -263,8 +277,8 @@ def main():
                 dest = "player1"
 
                 # value = ? => Find value of the first card of player1
-                value = players[1].hand[0].color
-
+                value = players[1].hand[0].value if typ == "value" else players[1].hand[0].color
+                
                 # Debug purpose
                 if playerName == "player1":
                     continue
@@ -286,18 +300,33 @@ def main():
                 for i in data.positions:
                     print("\t" + str(i))
                 
-                for i in data.positions:
-                    if data.type == "value":
-                        hintTable[int(data.destination[-1:])].directHintValue(i)
-                    elif data.type == "color":
-                        hintTable[int(data.destination[-1:])].directHintColor(i)
+                for i in range(getNumSlots(numPlayers)):
+                    if i in data.positions:
+                        if data.type == "color":
+                            hintTable[int(data.destination[-1:])][i].directHintColor(data.value)
+                        elif data.type == "value":
+                            hintTable[int(data.destination[-1:])][i].directHintValue(data.value)
+                        else:
+                            print("ERROR: Wrong hint type")
                     else:
-                        print("ERROR: Wrong hint type")
+                        if data.type == "color":
+                            hintTable[int(data.destination[-1:])][i].undirectHintColor(data.value)
+                        elif data.type == "value":
+                            hintTable[int(data.destination[-1:])][i].undirectHintValue(data.value)
+                        else:
+                            print("ERROR: Wrong hint type")
+                            
+                #hard code moves, just to test the rule  
+                hintTable[1][0].directHintColor('red')
+                hintTable[1][0].directHintValue(0)
 
                 #Just for testing
                 print("\nHINT TABLE (after update):")
-                print(f"values: {hintTable[int(data.destination[-1:])].values}")
-                print(f"colors: {hintTable[int(data.destination[-1:])].colors}\n")
+                for slot in range(getNumSlots(numPlayers)):
+                    print(f"values: {hintTable[int(data.destination[-1:])][slot].values}")
+                    print(f"colors: {hintTable[int(data.destination[-1:])][slot].colors}\n")
+
+                playIfCertain(1, hintTable[1])
 
                 # Dest Hint (Other data is sent from server) ///// Could we not print it?
                 if playerName == "player0":
