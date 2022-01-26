@@ -18,11 +18,23 @@ class CardHints:
         for v in self.values.keys():
             self.values[v]   = -1   if self.values[v] != 1 else self.values[v]    #assert the number of ones cannot be more than 1, if not throw exception
         self.values[val] = 1
+        
+        occurrences = list(self.values.values()).count(1)
+        try:
+            assert occurrences <= 1
+        except AssertionError:
+            print(f"AssertionError: there are {occurrences} occurrences of number 1")
 
     def directHintColor(self, val):
         for c in self.colors.keys():
             self.colors[c]  = -1    if self.colors[c] != 1 else self.colors[c]
         self.colors[val] = 1
+
+        occurrences = list(self.colors.values()).count(1)
+        try:
+            assert occurrences <= 1
+        except AssertionError:
+            print(f"AssertionError: there are {occurrences} occurrences of number 1")
 
     # I put to -1 the cards I am sure they are not such value/color (indirect info)
     def undirectHintValue(self, val):
