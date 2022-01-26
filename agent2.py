@@ -155,16 +155,7 @@ def commandPlay(cardPos: int, playerName: str, s: socket):
             print("Note tokens used: " + str(data.usedNoteTokens) + "/8")
             print("Storm tokens used: " + str(data.usedStormTokens) + "/3")
 
-def playIfCertain(playerNum: int, hintTable):
-    for slot in range(getNumSlots(numPlayers)):    #ok to import them? is there a better way?        
 
-        if(hintTable[slot].values.items())
-        for (k1, v1), (k2, v2) in zip(hintTable[slot].values.items(), hintTable[slot].colors.items()):
-            #print(f"{k1} -> {v1} type {type(v1)}")
-            #print(f"{k2} -> {v2} type {type(v2)}")
-            if(v1==1 & v2==1):
-                print(f"For slot number {slot}:")
-                print(f"k1: {k1} and k2: {k2}")
 
     return None
 
@@ -183,6 +174,17 @@ plays = [0]  # just to debug
 cards = []
 
 hintTable = [[0 for x in range(getNumSlots(numPlayers))] for y in range(numPlayers)] #Array of shape H=[#Players][#Slots]
+
+def playIfCertain(playerNum: int, hintTable):
+    for slot in range(getNumSlots(numPlayers)):    #ok to import them? is there a better way?        
+
+        if(any(el==1 for el in hintTable[slot].values.values()) 
+            & any(el==1 for el in hintTable[slot].colors.values())):
+                print(f"Found playable card for slot number {slot}:")
+                return slot                                         #In this case, we are playing the first playable card
+                                                                    #of the player, there maybe more than one, we can make
+                                                                    #an array and then by some metric (or random) choose one
+
 
 def main():
     global status
@@ -315,8 +317,8 @@ def main():
                             hintTable[int(data.destination[-1:])][i].undirectHintValue(data.value)
                         else:
                             print("ERROR: Wrong hint type")
-                            
-                #hard code moves, just to test the rule  
+
+                #hard code moves, just to test the rule , it might give problems when there are teo correct colors for card 0
                 hintTable[1][0].directHintColor('red')
                 hintTable[1][0].directHintValue(0)
 
@@ -326,7 +328,8 @@ def main():
                     print(f"values: {hintTable[int(data.destination[-1:])][slot].values}")
                     print(f"colors: {hintTable[int(data.destination[-1:])][slot].colors}\n")
 
-                playIfCertain(1, hintTable[1])
+                playableCard = playIfCertain(1, hintTable[1])
+                print(f"\n the playable card is: {playableCard}")
 
                 # Dest Hint (Other data is sent from server) ///// Could we not print it?
                 if playerName == "player0":
