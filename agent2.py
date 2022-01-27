@@ -35,7 +35,6 @@ def connectClients(numPlayers: int) -> list():
             return
         print("Connection accepted by the server. Welcome " + playerName)
         clientSockets.append(s)
-
     return clientSockets
 
 
@@ -63,25 +62,6 @@ def getReadyClients(numPlayers: int, clientSockets: list) -> int:
             return -1
         s.send(GameData.ClientPlayerReadyData(playerName).serialize())
     return 0
-
-
-def readGame(numPlayers: int, clientSockets: socket):
-    cards = []
-    playerName = "player0"
-    client = 0
-    s = clientSockets[client]
-
-    # send SHOW
-    s.send(GameData.ClientGetGameStateRequest(
-        playerName).serialize())
-    data = s.recv(DATASIZE)
-    data = GameData.GameData.deserialize(data)
-
-    if type(data) is GameData.ServerGameStateData:
-        dataOk = True
-        return data
-    return None
-
 
 def getNumSlots(numPlayers):
     if numPlayers <= 3:
@@ -156,14 +136,30 @@ def managePlayResponse(data):
         print("Ready for a new game!")
         return 0
 
+
+def manageDiscardResponse(data):
+    data = GameData.GameData.deserialize(data)
+    if type(data) is GameData.ServerActionValid:
+        dataOk = True
+        print("Action valid!")
+        print("Current player: " + data.player)
+        return 1
+    elif type(data) is GameData.ServerGameOver:
+        print("Game over!")
+        print("Start new game")
+        return 0
+    else:
+        print("Some error occurred with discard... this should not happen")
+        print(type(data))
+        os._exit(-1)
+
 # Function that updates the HintTable after an Hint
-
-
 def manageHintTableHintUpdate(data):
     global numPlayers
     global hintTable
+    global slots
     data = GameData.GameData.deserialize(data)
-    for i in range(getNumSlots(numPlayers)):
+    for i in range(slots):
         if i in data.positions:
             if data.type == "color":
                 hintTable[int(data.destination[-1:])
@@ -184,10 +180,15 @@ def manageHintTableHintUpdate(data):
                 print("ERROR: Wrong hint type")
 
 # Function that updates the HintTable after a play or a discard
+def manageHintTableUpdate(playerNum: int, slotNum: int):
+    global numPlayers
+    global hintTable
+    global slots
 
-
-def manageHintTableUpdate(data):
-    pass
+    for s in range(slotNum, slots-1):
+        hintTable[playerNum][s] = hintTable[playerNum][s+1]
+    s += 1
+    hintTable[playerNum][s] = CardHints(slots)
 
 
 
@@ -199,10 +200,6 @@ slots = getNumSlots(numPlayers)
 statuses = ["Lobby", "Game", "GameHint"]
 
 status = statuses[0]
-hintState = ("", "")
-
-plays = [0]  # just to debug
-
 cards = []
 
 hintTable = [[0 for x in range(getNumSlots(numPlayers))] 
@@ -216,7 +213,6 @@ colorDict = {0:'red', 1:'green', 2:'blue', 3:'yellow', 4:'white'}
 def playIfCertain(playerNum: int, hintTable):
     # ok to import them? is there a better way?
     for slot in range(getNumSlots(numPlayers)):
-
         if(any(el == 1 for el in hintTable[slot].values.values())
                 & any(el == 1 for el in hintTable[slot].colors.values())):
             # print(f"Found playable card for slot number {slot}:")
@@ -252,8 +248,9 @@ def isPlayable(cardNum, cardColor, tableCards) -> bool:       #based on the 5 st
 def hintTableInit():
     global numPlayers
     global hintTable
+    global slots
     for p in range(numPlayers):
-        for slot in range(getNumSlots(numPlayers)):
+        for slot in range(slots):
             hintTable[p][slot] = CardHints(slots)
 
 
@@ -265,43 +262,19 @@ def main():
     print("start simulation")
     clientSockets = []
 
+    print("start simulation")
+    
     clientSockets = connectClients(numPlayers)
+    print("connected")
+    
     getReadyClients(numPlayers, clientSockets)
-
-    print("Game start!")
+    print("ready")
 
     run = True
-    command = "show"
     players = []
-    # SAVE INFORMATIONS
-
-    # save cards => to update on play or discard
-
-    # with game struct
-    # we can take what we need (!!! except additional infos, and card of the current_player (now is player0) ) from here
-    #  -> Should be updated automatically => but can't see your hand in your own turn
-
-    game = readGame(numPlayers, clientSockets)
-
-    players = game.players
-    print(players[1].name)
-
-    player = players[1]
-    for card in range(len(player.hand)):
-        print(player.hand[card].toString())
-        print()
-
-    # init card_infos => !!! to update on hint or play or discard
+    
+    # init HintTable => will be updated on hint or play or discard
     hintTableInit()
-
-    print("HINT TABLE player0:")
-    for slot in range(getNumSlots(numPlayers)):
-        print(hintTable[0][slot].values)
-        print(hintTable[0][slot].colors)
-
-    time.sleep(0)
-    # init table_cards = {}
-    # init scarti = {}
 
     # START GAME
     it = 0
@@ -311,7 +284,7 @@ def main():
 
             s = clientSockets[client]
 
-            print(f"\nfor cycle of player{client}\n")
+            print(f"\nplayer{client},it:{it} \n")
 
             # Before starting, every player is doing show in order to update infos
             game = commandShow(playerName, s)
@@ -322,11 +295,11 @@ def main():
 
             # 1. think a move (All players hinting if possible,  but player1)
             move = "hint" if (
-                playerName != "player1" and game.usedNoteTokens < 8) else "play"
+                playerName != "player1" and game.usedNoteTokens < 8) else "discard"
 
             # 2. take action
-
             if move == "play":
+
                 # (PLAY ALWAYS CARD 0)
 
                 probableSlot = playIfCertain(client, hintTable[1])
@@ -345,12 +318,16 @@ def main():
                         continue
                     data = clientSockets[c].recv(DATASIZE)
                     res = managePlayResponse(data)
+
                 # This means game ended, so.. restart
                 if res == 0:
                     hintTableInit()
+                    print("Start new game")
+                    #run = False
                     break
-                # without this multiple occurrencies will happen because slot will change
-                # hintTableUpdate()
+
+                # shift hint slot when playing a card
+                manageHintTableUpdate(client, cardPos)
 
             elif move == "hint":
                 # (GIVE HINT)
@@ -360,18 +337,11 @@ def main():
                 typ = "color"
                 dest = "player1"
 
-                # value = ? => Find value of the first card of player1
+                # value? => Find value of the first card of player1 (just for the moment)
                 value = players[1].hand[0].value if typ == "value" else players[1].hand[0].color
                 print(value)
-                time.sleep(2)
 
-                # Debug purpose, just checking that player1 is not hinting (pretty useless..)
-                if playerName == "player1":
-                    print("There must be an error")
-                    time.sleep(10)
-                    continue
-
-                # Source Hint
+                # Send request
                 s.send(GameData.ClientHintData(
                     playerName, dest, typ, value).serialize())
 
@@ -395,7 +365,7 @@ def main():
 
                 # Just for testing
                 print("\nHINT TABLE (after update):")
-                for slot in range(getNumSlots(numPlayers)):
+                for slot in range(slots):
                     print(
                         f"values: {hintTable[1][slot].values}")
                     print(
@@ -406,12 +376,25 @@ def main():
 
                 # 2. Put hint info in HINT TABLE (done)
                 # 3. Check if token is correctly decreasing (done)
-                # 4. Remember to update info after play or discard (to do)
+                # 4. Remember to update info after play or discard (done)
 
-            # elif move == "discard":
-                # Yet to implement. We have to be aware of many things, e.g. when getting the new card, updating the hint table.
+            elif move == "discard":
+                discardOrder = 0
+                s.send(GameData.ClientPlayerDiscardCardRequest(
+                    playerName, discardOrder).serialize())
+                data = s.recv(DATASIZE)
+                res = manageDiscardResponse(data)
+                if res:
+                    manageHintTableUpdate(client, discardOrder)
+                for c in range(numPlayers):
+                    if c == client:
+                        continue
+                    data = clientSockets[c].recv(DATASIZE)
+                    res = manageDiscardResponse(data)
 
-        time.sleep(3)
+                #this means GameOver
+                if res == 0:
+                    break
 
 
 if (__name__ == "__main__"):
