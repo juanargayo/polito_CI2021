@@ -100,23 +100,23 @@ def commandShow(playerName: str, s: socket):  # SHOW (just first time)
         dataOk = True
         # Removing print for debugging purpose (too much print...)
 
-        # print("Current player: " + data.currentPlayer)
-        # print("Player hands: ")
-        # for p in data.players:
-        #     print(p.toClientString())
-        #     # SAVING INFORMATIONS => cards[0] avremo la hand di player0
-        # print("Cards in your hand: " + str(data.handSize))
-        # print("Table cards: ")
-        # for pos in data.tableCards:
-        #     print(pos + ": [ ")
-        #     for c in data.tableCards[pos]:
-        #         print(c.toClientString() + " ")
-        #         print("]")
-        # print("Discard pile: ")
-        # for c in data.discardPile:
-        #     print("\t" + c.toClientString())
-        # print("Note tokens used: " + str(data.usedNoteTokens) + "/8")
-        # print("Storm tokens used: " + str(data.usedStormTokens) + "/3")
+        print("Current player: " + data.currentPlayer)
+        print("Player hands: ")
+        for p in data.players:
+            print(p.toClientString())
+            # SAVING INFORMATIONS => cards[0] avremo la hand di player0
+        print("Cards in your hand: " + str(data.handSize))
+        print("Table cards: ")
+        for pos in data.tableCards:
+            print(pos + ": [ ")
+            for c in data.tableCards[pos]:
+                print(c.toClientString() + " ")
+                print("]")
+        print("Discard pile: ")
+        for c in data.discardPile:
+            print("\t" + c.toClientString())
+        print("Note tokens used: " + str(data.usedNoteTokens) + "/8")
+        print("Storm tokens used: " + str(data.usedStormTokens) + "/3")
         return data
     return None
 
@@ -314,7 +314,7 @@ def main():
                 # 1. send a request
 
                 cardPos = 0
-                typ = "value"
+                typ = "color"
                 dest = "player1"
 
                 # value = ? => Find value of the first card of player1
@@ -346,7 +346,7 @@ def main():
                 # Hint table update
                 manageHintTableHintUpdate(data)
 
-                # hard code moves, just to test the rule , it might give problems when there are teo correct colors for card 0
+                # hard code moves, just to test the rule , it might give problems when there are two correct colors for card 0
                 # hintTable[1][0].directHintColor('red')
                 # hintTable[1][0].directHintValue(0)
 

@@ -7,7 +7,7 @@ class CardHints:
 
     # When I start every cell is 0, this means that I have no information about the card in this slot (it could be every number and every color)
     def __init__(self, numSlots):   #remove numSlots
-        self.values = {v:0 for v in range(0,5)}
+        self.values = {v:0 for v in range(1,6)}
         self.colors = {c:0 for c in CardHints.colors}
 
         #self.values = np.full((numSlots), 0, dtype=int)     #[1, 2, 3, 4, 5]
