@@ -4,6 +4,7 @@ import socket
 from sys import stdout
 from threading import Thread
 from unittest.result import STDOUT_LINE
+from xmlrpc.client import Boolean
 import numpy as np
 from numpy import nancumsum
 import GameData
@@ -120,9 +121,13 @@ def managePlayResponse(data):
     if type(data) is GameData.ServerPlayerMoveOk:
         print("Nice move!")
         print("Current player: " + data.player)
+        print(f"card played: {(data.card).toString()} , card.value: {data.card.value}")
+        # print(f"cardColor: {data.card.color}")
+        # print(f"lastPlayer: {data.lastPlayer} player: {data.player} handLength: {data.handLength}")
         return 1
     if type(data) is GameData.ServerPlayerThunderStrike:
         print("OH NO! The Gods are unhappy with you!")
+        print(f"card played: {(data.card).toString()} , card.value: {data.card.value}")
         return -1
     if type(data) is GameData.ServerGameOver:
         print(data.message)
@@ -194,6 +199,7 @@ def manageHintTableUpdate(playerNum: int, slotNum: int):
     hintTable[playerNum].append(CardHints(slots))
 
 
+
 run = True
 
 numPlayers = 3
@@ -204,19 +210,48 @@ statuses = ["Lobby", "Game", "GameHint"]
 status = statuses[0]
 cards = []
 
-hintTable = [[0 for x in range(slots)] for y in range(
-    numPlayers)]  # Array of shape H=[#Players][#Slots]
+hintTable = [[0 for x in range(getNumSlots(numPlayers))] 
+                for y in range(numPlayers)]        # Array of shape H=[#Players][#Slots]
 
+tableCards = {}     # dict for storing the stacks of cards on the table
+
+colorDict = {0:'red', 1:'green', 2:'blue', 3:'yellow', 4:'white'}
+#########  RULES HERE JUST TO TEST, THEN TO BE MOVED TO rules.py  ###########
 
 def playIfCertain(playerNum: int, hintTable):
     # ok to import them? is there a better way?
     for slot in range(getNumSlots(numPlayers)):
         if(any(el == 1 for el in hintTable[slot].values.values())
                 & any(el == 1 for el in hintTable[slot].colors.values())):
-            print(f"Found playable card for slot number {slot}:")
-            return slot  # In this case, we are playing the first playable card
-            # of the player, there maybe more than one, we can make
-            # an array and then by some metric (or random) choose one
+            # print(f"Found playable card for slot number {slot}:")
+            # print(f"the type(hintTable[slot].values.values()): {type(hintTable[slot].values.values())}")
+            # print(f"list(hintTable[slot].values.values()).index(1)+1: {list(hintTable[slot].values.values()).index(1)+1}")
+            # print(f"list(hintTable[slot].colors.values()).index(1): {list(hintTable[slot].colors.values()).index(1)}")
+            cardNum = list(hintTable[slot].values.values()).index(1)+1
+            cardColor = colorDict[list(hintTable[slot].colors.values()).index(1)]
+            print(f"cardNum: {cardNum} , cardColor: {cardColor}")
+            if(isPlayable(cardNum, cardColor, tableCards)):
+                print("The card is playable")
+                return slot
+            else:
+                print("The card is NOT playable")
+                return False
+                                        # In this case, we are playing the first playable card
+                                        # of the player, there maybe more than one, we can make
+                                        # an array and then by some metric (or random) choose one
+
+def isPlayable(cardNum, cardColor, tableCards) -> bool:       #based on the 5 stacks of cards, says if one card is playable
+    # print(f"The tableCards at isPlayable is: {tableCards}")
+    # print(f"tableCards[cardColor]: {tableCards[cardColor]} , len(tableCards[cardColor]): {len(tableCards[cardColor])}")
+    # print(f"cardNum: {cardNum} , cardColor: {cardColor}")
+    if(len(tableCards[cardColor])<cardNum):
+        print("I can play the card")
+        return True
+
+    return False
+
+
+#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#
 
 
 def hintTableInit():
@@ -232,6 +267,9 @@ def main():
     global status
     global numPlayers
     global hintTable
+    global tableCards
+    print("start simulation")
+    clientSockets = []
 
     print("start simulation")
 
@@ -260,6 +298,9 @@ def main():
             # Before starting, every player is doing show in order to update infos
             game = commandShow(playerName, s)
             players = game.players
+            tableCards = game.tableCards
+
+            print(f"the tableCards are: {tableCards}")
 
             # 1. think a move (All players hinting if possible,  but player1)
             move = "hint" if (
@@ -269,7 +310,12 @@ def main():
             if move == "play":
 
                 # (PLAY ALWAYS CARD 0)
-                cardPos = 0
+
+                probableSlot = playIfCertain(client, hintTable[1])
+                print(f"probableSlot: {probableSlot}")
+
+                cardPos = probableSlot if probableSlot else 0
+                #cardPos = 0
                 s.send(GameData.ClientPlayerPlayCardRequest(
                     playerName, cardPos).serialize())
                 data = s.recv(DATASIZE)
@@ -297,7 +343,7 @@ def main():
                 # 1. send a request
 
                 cardPos = 0
-                typ = "value"
+                typ = "color"
                 dest = "player1"
 
                 # value? => Find value of the first card of player1 (just for the moment)
@@ -322,9 +368,9 @@ def main():
                 # Hint table update
                 manageHintTableHintUpdate(data)
 
-                # hard code moves, just to test the rule , it might give problems when there are teo correct colors for card 0
+                # hard code moves, just to test the rule , it might give problems when there are two correct colors for card 0
                 # hintTable[1][0].directHintColor('red')
-                # hintTable[1][0].directHintValue(0)
+                # hintTable[1][0].directHintValue(1)
 
                 # Just for testing
                 print("\nHINT TABLE (after update):")
