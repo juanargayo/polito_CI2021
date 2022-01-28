@@ -185,10 +185,8 @@ def manageHintTableUpdate(playerNum: int, slotNum: int):
     global hintTable
     global slots
 
-    for s in range(slotNum, slots-1):
-        hintTable[playerNum][s] = hintTable[playerNum][s+1]
-    s += 1
-    hintTable[playerNum][s] = CardHints(slots)
+    hintTable[playerNum].pop(slotNum)
+    hintTable[playerNum].append(CardHints(slots))
 
 
 
@@ -236,12 +234,32 @@ def isPlayable(cardNum, cardColor, tableCards) -> bool:       #based on the 5 st
     # print(f"The tableCards at isPlayable is: {tableCards}")
     # print(f"tableCards[cardColor]: {tableCards[cardColor]} , len(tableCards[cardColor]): {len(tableCards[cardColor])}")
     # print(f"cardNum: {cardNum} , cardColor: {cardColor}")
-    if(len(tableCards[cardColor])<cardNum):
+    if(len(tableCards[cardColor])==cardNum-1):
         print("I can play the card")
         return True
 
     return False
 
+def playSafeCard(hintTable, tableCards):        #we know just know the number of the card. It searches
+                                                #for a slot it can be placed, regardless of the color
+    cardsNum = []
+    for slot in range(getNumSlots(numPlayers)):
+        try:
+            #print(list(hintTable[slot].values.values()))
+            possibleCards = list(hintTable[slot].values.values()).index(1)+1
+            print(f"list comp {[possibleCards==len(tableCards[colorDict[x]])+1 for x in range(5)]}")
+            # for x in range(5): 
+            #     print(f"tablecard[{x}]: {tableCards[colorDict[x]]}")
+            # print(f"possibleCards-1: {possibleCards-1} ")
+            if(any(possibleCards==len(tableCards[colorDict[x]])+1 for x in range(5))):
+                print(f"possibleCardsFound: {possibleCards} and tableCards: {tableCards}")
+                cardsNum.append(possibleCards) 
+        except ValueError:
+            print(f"No known card value in slot: {slot}")
+    if(cardsNum):    
+        return cardsNum[0]       #return the first card to be playable. There can be many, we my choose by some metric                  
+    else:
+        return None
 
 #--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#
 
@@ -290,19 +308,23 @@ def main():
             game = commandShow(playerName, s)
             players = game.players
             tableCards = game.tableCards
+            print(f"players[client]: {players[client].toString()} players[1].hand: {players[client].hand}")
+
 
             print(f"the tableCards are: {tableCards}")
 
             # 1. think a move (All players hinting if possible,  but player1)
-            move = "hint" if (
-                playerName != "player1" and game.usedNoteTokens < 8) else "discard"
-
+            # move = "hint" if (
+            #     playerName != "player1" and game.usedNoteTokens < 8) else "discard"
+            move = "hint" if client % 2 == 0 and playerName != "player1" and game.usedNoteTokens < 8 else "play"
             # 2. take action
             if move == "play":
 
                 # (PLAY ALWAYS CARD 0)
 
-                probableSlot = playIfCertain(client, hintTable[1])
+                #probableSlot = playIfCertain(client, hintTable[client])
+                probableSlot = playSafeCard(hintTable[client], tableCards)
+
                 print(f"probableSlot: {probableSlot}")
 
                 cardPos = probableSlot if probableSlot else 0
@@ -334,7 +356,7 @@ def main():
                 # 1. send a request
 
                 cardPos = 0
-                typ = "color"
+                typ = "value"
                 dest = "player1"
 
                 # value? => Find value of the first card of player1 (just for the moment)
@@ -360,8 +382,8 @@ def main():
                 manageHintTableHintUpdate(data)
 
                 # hard code moves, just to test the rule , it might give problems when there are two correct colors for card 0
-                # hintTable[1][0].directHintColor('red')
-                # hintTable[1][0].directHintValue(1)
+                #hintTable[1][0].directHintColor('red')
+                #hintTable[1][0].directHintValue(1)
 
                 # Just for testing
                 print("\nHINT TABLE (after update):")
