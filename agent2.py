@@ -63,6 +63,7 @@ def getReadyClients(numPlayers: int, clientSockets: list) -> int:
         s.send(GameData.ClientPlayerReadyData(playerName).serialize())
     return 0
 
+
 def getNumSlots(numPlayers):
     if numPlayers <= 3:
         return 5
@@ -154,6 +155,8 @@ def manageDiscardResponse(data):
         os._exit(-1)
 
 # Function that updates the HintTable after an Hint
+
+
 def manageHintTableHintUpdate(data):
     global numPlayers
     global hintTable
@@ -180,10 +183,17 @@ def manageHintTableHintUpdate(data):
                 print("ERROR: Wrong hint type")
 
 # Function that updates the HintTable after a play or a discard
+
+
 def manageHintTableUpdate(playerNum: int, slotNum: int):
     global numPlayers
     global hintTable
     global slots
+
+    # for s in range(slotNum, slots-1):
+    #     hintTable[playerNum][s] = hintTable[playerNum][s+1]
+    # s += 1
+    # hintTable[playerNum][s] = CardHints(slots)
 
     hintTable[playerNum].pop(slotNum)
     hintTable[playerNum].append(CardHints(slots))
@@ -263,6 +273,7 @@ def playSafeCard(hintTable, tableCards):        #we know just know the number of
 
 #--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#
 
+
 def hintTableInit():
     global numPlayers
     global hintTable
@@ -281,16 +292,16 @@ def main():
     clientSockets = []
 
     print("start simulation")
-    
+
     clientSockets = connectClients(numPlayers)
     print("connected")
-    
+
     getReadyClients(numPlayers, clientSockets)
     print("ready")
 
     run = True
     players = []
-    
+
     # init HintTable => will be updated on hint or play or discard
     hintTableInit()
 
@@ -401,7 +412,7 @@ def main():
                 # 4. Remember to update info after play or discard (done)
 
             elif move == "discard":
-                discardOrder = 0
+                discardOrder = 4
                 s.send(GameData.ClientPlayerDiscardCardRequest(
                     playerName, discardOrder).serialize())
                 data = s.recv(DATASIZE)
@@ -414,7 +425,7 @@ def main():
                     data = clientSockets[c].recv(DATASIZE)
                     res = manageDiscardResponse(data)
 
-                #this means GameOver
+                # this means GameOver
                 if res == 0:
                     break
 
