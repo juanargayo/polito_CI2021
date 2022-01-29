@@ -222,20 +222,23 @@ def playIfCertain(playerNum: int, hintTable):
     # ok to import them? is there a better way?
     for slot in range(getNumSlots(numPlayers)):
         if(any(el == 1 for el in hintTable[slot].values.values())
-                & any(el == 1 for el in hintTable[slot].colors.values())):
+                and any(el == 1 for el in hintTable[slot].colors.values())):
             # print(f"Found playable card for slot number {slot}:")
             # print(f"the type(hintTable[slot].values.values()): {type(hintTable[slot].values.values())}")
             # print(f"list(hintTable[slot].values.values()).index(1)+1: {list(hintTable[slot].values.values()).index(1)+1}")
             # print(f"list(hintTable[slot].colors.values()).index(1): {list(hintTable[slot].colors.values()).index(1)}")
-            cardNum = list(hintTable[slot].values.values()).index(1)+1
-            cardColor = colorDict[list(hintTable[slot].colors.values()).index(1)]
-            print(f"cardNum: {cardNum} , cardColor: {cardColor}")
-            if(isPlayable(cardNum, cardColor, tableCards)):
-                print("The card is playable")
-                return slot
-            else:
-                print("The card is NOT playable")
-                return False
+            try:
+                cardNum = list(hintTable[slot].values.values()).index(1)+1
+                cardColor = colorDict[list(hintTable[slot].colors.values()).index(1)]
+                print(f"cardNum: {cardNum} , cardColor: {cardColor}")
+                if(isPlayable(cardNum, cardColor, tableCards)):
+                    print("The card is playable")
+                    return slot
+                else:
+                    print("The card is NOT playable")
+                    return False
+            except ValueError:
+                print(f"ifCertain: No known card value in slot: {slot}")
                                         # In this case, we are playing the first playable card
                                         # of the player, there maybe more than one, we can make
                                         # an array and then by some metric (or random) choose one
@@ -267,10 +270,37 @@ def playSafeCard(hintTable, tableCards):        #we know just know the number of
         except ValueError:
             print(f"No known card value in slot: {slot}")
     if(cardsNum):    
-        return cardsNum[0]       #return the first card to be playable. There can be many, we my choose by some metric                  
+        return cardsNum[0]       #return the first card to be playable. There can be many, we may choose by some metric                  
     else:
         return None
 
+def hintPartiallyKnown(hintTable, tableCards, playerWhoHints, players):      #I hint a card that IS playable, which the player just knows the color or the value
+
+    print(f"\nThe playerWhoHints is: {playerWhoHints}")
+    playersArr = [p for p in range(numPlayers)]
+    playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]
+    print(f"players after slicing: {playersArr}\n")
+    
+    for p in playersArr:
+        for slot in slots:
+            foundValue = any(el == 1 for el in hintTable[p][slot].values.values())
+            foundColor = any(el == 1 for el in hintTable[p][slot].colors.values())
+
+            if(isPlayable(players[p].hand[slot].value, players[p].hand[slot].color, tableCards)):       #TODO: Check correspondance between cards 
+                if foundValue and not foundColor:                                                       #in hintTable and in the players hand
+                    return p, list(hintTable[slot].values.values()).index(1)+1
+                elif not foundValue and foundColor:
+                    return p, colorDict[list(hintTable[slot].colors.values()).index(1)]
+                else:
+                    continue
+            else:
+                continue
+    
+    return None
+
+def hintOnes():
+
+    return None
 #--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#
 
 
@@ -327,7 +357,9 @@ def main():
             # 1. think a move (All players hinting if possible,  but player1)
             # move = "hint" if (
             #     playerName != "player1" and game.usedNoteTokens < 8) else "discard"
-            move = "hint" if client % 2 == 0 and playerName != "player1" and game.usedNoteTokens < 8 else "play"
+            move = "hint" if client % 2 == 0 and playerName != "player1" and game.usedNoteTokens < 8 else "play"    #just to test and alternate
+
+            
             # 2. take action
             if move == "play":
 
@@ -365,6 +397,8 @@ def main():
             elif move == "hint":
                 # (GIVE HINT)
                 # 1. send a request
+
+                hintPartiallyKnown(hintTable, tableCards, client)
 
                 cardPos = 0
                 typ = "value"
