@@ -1,5 +1,6 @@
 from os import stat
 import os
+import random
 import socket
 from sys import stdout
 from threading import Thread
@@ -259,7 +260,7 @@ def playSafeCard(hintTable, tableCards):        #we know just know the number of
     for slot in range(getNumSlots(numPlayers)):
         try:
             #print(list(hintTable[slot].values.values()))
-            possibleCards = list(hintTable[slot].values.values()).index(1)+1
+            possibleCards = list(hintTable[slot].values.values()).index(1)+1                            #TODO: Check that card_index+1 matches card value when hinted/played
             print(f"list comp {[possibleCards==len(tableCards[colorDict[x]])+1 for x in range(5)]}")
             # for x in range(5): 
             #     print(f"tablecard[{x}]: {tableCards[colorDict[x]]}")
@@ -278,7 +279,7 @@ def hintPartiallyKnown(hintTable, tableCards, playerWhoHints, players):      #I 
 
     print(f"\nThe playerWhoHints is: {playerWhoHints}")
     playersArr = [p for p in range(numPlayers)]
-    playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]
+    playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]  
     print(f"players after slicing: {playersArr}\n")
     
     for p in playersArr:
@@ -288,19 +289,66 @@ def hintPartiallyKnown(hintTable, tableCards, playerWhoHints, players):      #I 
 
             if(isPlayable(players[p].hand[slot].value, players[p].hand[slot].color, tableCards)):       #TODO: Check correspondance between cards 
                 if foundValue and not foundColor:                                                       #in hintTable and in the players hand
-                    return p, list(hintTable[slot].values.values()).index(1)+1
+                    return p, colorDict[list(hintTable[p][slot].colors.values()).index(1)]
                 elif not foundValue and foundColor:
-                    return p, colorDict[list(hintTable[slot].colors.values()).index(1)]
+                    return p, list(hintTable[p][slot].values.values()).index(1)+1                  #TODO: Check that card_index+1 matches card value when hinted/played
                 else:
-                    continue
+                    continue                                                                    #TODO: Test, debug and check
             else:
                 continue
     
-    return None
+    return None, 0
 
-def hintOnes():
+def hintOnes(hintTable, playerWhoHints, players):                   #Hints cards with value one, to the player that has the most of them
 
-    return None
+    print(f"\nThe playerWhoHints is: {playerWhoHints}")
+    playersArr = [p for p in range(numPlayers)]
+    playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]  
+    print(f"players after slicing: {playersArr}\n")
+    
+    maxOnePlayer = None, 0      #FIrst value: player number, Second value: amount of one cards in his hand
+
+    for p in playersArr:
+        onesCount = 0
+        for slot in slots:
+            if hintTable[p][slot].values.values()[0] == 1:
+                continue           #The player p already knows about this one. See other slots
+            if players[p].hand[slot].value == 1):
+                onesCount += 1
+        if onesCount > maxOnePlayer[1]:
+            maxOnePlayer[0] = p
+            maxOnePlayer[1] = onesCount                                         #TODO: Test, debug and check
+
+    if maxOnePlayer[1] > 0:
+        return maxOnePlayer[0], maxOnePlayer[1]
+    else:
+        return None, 0
+
+def hintUnkown(hintTable, tableCards, playerWhoHints, players):             #Tell anoyone about some usefull info of a playable card. 
+                                                                            #Prioritizing value info over color of a card. 
+    print(f"\nThe playerWhoHints is: {playerWhoHints}")
+    playersArr = [p for p in range(numPlayers)]
+    playersArr = playersArr - playersArr[playerWhoHints]  
+    print(f"players after slicing: {playersArr}\n")
+    random.shuffle(playersArr)
+    print(f"players after shuffle: {playersArr}\n")
+
+    for p in playersArr:
+        for slot in slots:
+            foundValue = any(el == 1 for el in hintTable[p][slot].values.values())
+            foundColor = any(el == 1 for el in hintTable[p][slot].colors.values())
+
+            if(isPlayable(players[p].hand[slot].value, players[p].hand[slot].color, tableCards)):       #TODO: Check correspondance between cards 
+                if not foundValue and foundColor:                                                       #in hintTable and in the players hand
+                    return p, list(hintTable[slot].values.values()).index(1)+1
+                elif foundValue and not foundColor:
+                    return p, colorDict[list(hintTable[slot].colors.values()).index(1)]                  #TODO: Check that card_index+1 matches card value when hinted/played
+                elif not foundColor and not foundValue:
+                    return p, list(hintTable[slot].values.values()).index(1)+1                                                                    #TODO: Test, debug and check
+            else:
+                continue
+
+    return None, 0
 #--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#
 
 
