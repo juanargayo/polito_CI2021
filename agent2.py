@@ -313,7 +313,7 @@ def hintOnes(hintTable, playerWhoHints, players):                   #Hints cards
         for slot in slots:
             if hintTable[p][slot].values.values()[0] == 1:
                 continue           #The player p already knows about this one. See other slots
-            if players[p].hand[slot].value == 1):
+            if players[p].hand[slot].value == 1:
                 onesCount += 1
         if onesCount > maxOnePlayer[1]:
             maxOnePlayer[0] = p
