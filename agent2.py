@@ -1,3 +1,4 @@
+import collections
 from os import stat
 import os
 import random
@@ -200,6 +201,8 @@ def manageHintTableUpdate(playerNum: int, slotNum: int):
     hintTable[playerNum].append(CardHints(slots))
 
 
+            
+
 
 run = True
 
@@ -217,6 +220,7 @@ hintTable = [[0 for x in range(getNumSlots(numPlayers))]
 tableCards = {}     # dict for storing the stacks of cards on the table
 
 colorDict = {0:'red', 1:'green', 2:'blue', 3:'yellow', 4:'white'}
+colorsName= ['red', 'green', 'blue', 'yellow', 'white']
 #########  RULES HERE JUST TO TEST, THEN TO BE MOVED TO rules.py  ###########
 
 def playIfCertain(playerNum: int, hintTable):
@@ -248,7 +252,7 @@ def isPlayable(cardNum, cardColor, tableCards) -> bool:       #based on the 5 st
     # print(f"The tableCards at isPlayable is: {tableCards}")
     # print(f"tableCards[cardColor]: {tableCards[cardColor]} , len(tableCards[cardColor]): {len(tableCards[cardColor])}")
     # print(f"cardNum: {cardNum} , cardColor: {cardColor}")
-    if(len(tableCards[cardColor])==cardNum-1):
+    if(len(tableCards[cardColor])==cardNum-1):          #TODO: Check if its possible that there are empty places in the array that throws the len() calculation
         print("I can play the card")
         return True
 
@@ -283,15 +287,15 @@ def hintPartiallyKnown(hintTable, tableCards, playerWhoHints, players):      #I 
     print(f"players after slicing: {playersArr}\n")
     
     for p in playersArr:
-        for slot in slots:
+        for slot in range(slots):
             foundValue = any(el == 1 for el in hintTable[p][slot].values.values())
             foundColor = any(el == 1 for el in hintTable[p][slot].colors.values())
 
             if(isPlayable(players[p].hand[slot].value, players[p].hand[slot].color, tableCards)):       #TODO: Check correspondance between cards 
                 if foundValue and not foundColor:                                                       #in hintTable and in the players hand
-                    return p, colorDict[list(hintTable[p][slot].colors.values()).index(1)]
+                    return p, players[p].hand[slot].color
                 elif not foundValue and foundColor:
-                    return p, list(hintTable[p][slot].values.values()).index(1)+1                  #TODO: Check that card_index+1 matches card value when hinted/played
+                    return p, players[p].hand[slot].value                                       #TODO: Check that card_index+1 matches card value when hinted/played
                 else:
                     continue                                                                    #TODO: Test, debug and check
             else:
@@ -299,7 +303,7 @@ def hintPartiallyKnown(hintTable, tableCards, playerWhoHints, players):      #I 
     
     return None, 0
 
-def hintOnes(hintTable, playerWhoHints, players):                   #Hints cards with value one, to the player that has the most of them
+def hintOnes(hintTable, playerWhoHints, players):                   #Hints cards with value one to the player that has the most of them
 
     print(f"\nThe playerWhoHints is: {playerWhoHints}")
     playersArr = [p for p in range(numPlayers)]
@@ -310,8 +314,8 @@ def hintOnes(hintTable, playerWhoHints, players):                   #Hints cards
 
     for p in playersArr:
         onesCount = 0
-        for slot in slots:
-            if hintTable[p][slot].values.values()[0] == 1:
+        for slot in range(slots):
+            if hintTable[p][slot].values.values()[1] == 1:   #position number 0 in hintTable has the info of card value 1
                 continue           #The player p already knows about this one. See other slots
             if players[p].hand[slot].value == 1:
                 onesCount += 1
@@ -320,12 +324,12 @@ def hintOnes(hintTable, playerWhoHints, players):                   #Hints cards
             maxOnePlayer[1] = onesCount                                         #TODO: Test, debug and check
 
     if maxOnePlayer[1] > 0:
-        return maxOnePlayer[0], maxOnePlayer[1]
+        return maxOnePlayer[0], 1
     else:
-        return None, 0
+        return None, 0      #no player with one-value cards found
 
 def hintUnkown(hintTable, tableCards, playerWhoHints, players):             #Tell anoyone about some usefull info of a playable card. 
-                                                                            #Prioritizing value info over color of a card. 
+                                                                            #Prioritizing value information over color of a card. 
     print(f"\nThe playerWhoHints is: {playerWhoHints}")
     playersArr = [p for p in range(numPlayers)]
     playersArr = playersArr - playersArr[playerWhoHints]  
@@ -334,21 +338,123 @@ def hintUnkown(hintTable, tableCards, playerWhoHints, players):             #Tel
     print(f"players after shuffle: {playersArr}\n")
 
     for p in playersArr:
-        for slot in slots:
+        for slot in range(slots):
             foundValue = any(el == 1 for el in hintTable[p][slot].values.values())
             foundColor = any(el == 1 for el in hintTable[p][slot].colors.values())
 
-            if(isPlayable(players[p].hand[slot].value, players[p].hand[slot].color, tableCards)):       #TODO: Check correspondance between cards 
+            if isPlayable(players[p].hand[slot].value, players[p].hand[slot].color, tableCards):       #TODO: Check correspondance between cards 
                 if not foundValue and foundColor:                                                       #in hintTable and in the players hand
-                    return p, list(hintTable[slot].values.values()).index(1)+1
+                    return p, players[p].hand[slot].value
                 elif foundValue and not foundColor:
-                    return p, colorDict[list(hintTable[slot].colors.values()).index(1)]                  #TODO: Check that card_index+1 matches card value when hinted/played
+                    return p, players[p].hand[slot].color                               #TODO: Check that card_index+1 matches card value when hinted/played
                 elif not foundColor and not foundValue:
-                    return p, list(hintTable[slot].values.values()).index(1)+1                                                                    #TODO: Test, debug and check
+                    return p, players[p].hand[slot].value                                                                    #TODO: Test, debug and check
             else:
                 continue
 
     return None, 0
+
+def hintOld(hintTable, playerWhoHints, players, tableCards):            #Chooses a random player and hints him the oldest card it has
+    playersArr = [p for p in range(numPlayers)]
+    playersArr = playersArr - playersArr[playerWhoHints] 
+    random.shuffle(playersArr)
+    hint = 1 
+    age = 0
+
+    break_out_flag = False
+
+    for p in playersArr:
+        for slot in range(slots):
+            if isPlayable(players[p].hand[slot].value, players[p].hand[slot].color, tableCards):
+                if hintTable[p][slot].age > age:
+                    age = hintTable[p][slot].age
+                    if not any(el == 1 for el in hintTable[p][slot].values.values()):
+                        hint = players[p].hand[slot].value
+                    else:
+                        hint = players[p].hand[slot].color
+            break_out_flag = True
+        if break_out_flag:                                                                      #TODO: Test, debug and check
+            break
+
+    return p, hint
+
+
+def hintPlayable(playerWhoHints, players, tableCards):              #Hints a playable card, randomly chooses between color or value, even if it already knows it
+    playersArr = [p for p in range(numPlayers)]
+    playersArr = playersArr - playersArr[playerWhoHints] 
+    random.shuffle(playersArr)
+
+    for p in playersArr:
+        for slot in range(slots):
+            if(isPlayable(players[p].hand[slot].value, players[p].hand[slot].color, tableCards)):
+                return p, random.choice([players[p].hand[slot].value, 
+                                        players[p].hand[slot].color])
+
+    return None, 0                                                                                  #TODO: Test, debug and check
+
+def hintUseless(hintTable, playerWhoHints, players, tableCards):                    #Hints a useless card. A card whoes value is below the stack's top one, for the given color
+    playersArr = [p for p in range(numPlayers)]
+    playersArr = playersArr - playersArr[playerWhoHints] 
+    random.shuffle(playersArr)
+
+    for p in playersArr:
+        for slot in range(slots):
+            if len(tableCards[players[p].hand[slot].color]) >= players[p].hand[slot].value:     #checks for the pile of the cards color if the amount (len()) of cards
+                                                                                                #its higher than the card's number. If True > card won't be played
+                if not any(el == 1 for el in hintTable[p][slot].values.values()):
+                    return p, players[p].hand[slot].value                                       #if the players doesn't know the value, I hint it
+                elif not any(el == 1 for el in hintTable[p][slot].colors.values()):
+                    return p, players[p].hand[slot].color                                       #if the players doesn't know the color, I hint it
+    return None, 0                                                                              #TODO: Test, debug and check
+
+def hintFives(hintTable, playerWhoHints, players):
+
+    playersArr = [p for p in range(numPlayers)]
+    playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]  
+    random.shuffle(playersArr)
+
+    maxOnePlayer = None, 0      #FIrst value: player number, Second value: amount of one cards in his hand
+
+    for p in playersArr:
+        fivesCount = 0
+        for slot in range(slots):
+            if hintTable[p][slot].values.values()[5] == 5:
+                continue           #The player p already knows about this five. See other slots
+            if players[p].hand[slot].value == 5:
+                fivesCount += 1
+        if fivesCount > maxOnePlayer[1]:
+            maxOnePlayer[0] = p
+            maxOnePlayer[1] = fivesCount                                         #TODO: Test, debug and check
+
+    if maxOnePlayer[1] > 0:
+        return maxOnePlayer[0], 5
+    else:
+        return None, 0      #no player with five-value cards found
+
+
+def hintMostInfo(hintTable, playerWhoHints, players):                       #Hint whatever gives the most information to the player 
+    playersArr = [p for p in range(numPlayers)]                             #(given by amount of cards with same color or value)
+    playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]  
+    p = random.choice(playersArr)
+
+    color = {c:0 for c in colorsName}       #(color name, #repetitions)
+    value = {v:0 for v in range(1,6)}       #(value, #repetitions)
+
+    for slot in range(slots):
+        if hintTable[p][slot].values.values()[players[p].hand[slot].value] == 0:    #checks if the card's value/color the player p has in its hand has not been hinted yet
+            value[players[p].hand[slot].value] += 1
+        if hintTable[p][slot].colors.values()[players[p].hand[slot].color] == 0:
+            color[players[p].hand[slot].color] += 1
+
+
+    sortedColor =  collections.OrderedDict({k: v for k, v in sorted(color.items(), key=lambda item: item[1], reverse=True)})
+    sortedValue =  collections.OrderedDict({k: v for k, v in sorted(value.items(), key=lambda item: item[1], reverse=True)})
+
+    if next(iter(sortedColor.values())) >= next(iter(sortedValue.values())):
+        return p, next(iter(sortedColor.keys()))
+    else:                                                                                       #TODO: Test, debug and check
+        return p, next(iter(sortedValue.keys()))
+
 #--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#
 
 
@@ -360,6 +466,11 @@ def hintTableInit():
         for slot in range(slots):
             hintTable[p][slot] = CardHints(slots)
 
+def updateCardsAge(hintTable):
+
+    for p in range(numPlayers):
+        for slot in range(slots):
+            hintTable[p][slot].incrementAge()
 
 def main():
     global status
@@ -399,8 +510,9 @@ def main():
             tableCards = game.tableCards
             print(f"players[client]: {players[client].toString()} players[1].hand: {players[client].hand}")
 
-
             print(f"the tableCards are: {tableCards}")
+
+            updateCardsAge()        #increment all the cards' age in the hand of players by one
 
             # 1. think a move (All players hinting if possible,  but player1)
             # move = "hint" if (
@@ -440,7 +552,7 @@ def main():
                     break
 
                 # shift hint slot when playing a card
-                manageHintTableUpdate(client, cardPos)
+                manageHintTableUpdate(client, cardPos)      
 
             elif move == "hint":
                 # (GIVE HINT)

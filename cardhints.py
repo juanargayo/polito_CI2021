@@ -9,6 +9,7 @@ class CardHints:
     def __init__(self, numSlots):   #remove numSlots
         self.values = {v:0 for v in range(1,6)}
         self.colors = {c:0 for c in CardHints.colors}
+        self.age    = 0
 
         #self.values = np.full((numSlots), 0, dtype=int)     #[1, 2, 3, 4, 5]
         #self.colors = np.full((numSlots), 0, dtype=int)     #[R, G, B, Y, W]
@@ -42,3 +43,6 @@ class CardHints:
 
     def undirectHintColor(self, val):
         self.colors[val] = -1
+
+    def incrementAge(self):
+        self.age +=1
