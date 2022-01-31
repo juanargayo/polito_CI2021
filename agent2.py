@@ -328,7 +328,7 @@ def hintOnes(hintTable, playerWhoHints, players):                   #Hints cards
     else:
         return None, 0      #no player with one-value cards found
 
-def hintUnkown(hintTable, tableCards, playerWhoHints, players):             #Tell anoyone about some usefull info of a playable card. 
+def hintUseful(hintTable, tableCards, playerWhoHints, players):             #Tell anoyone about some useful info of a playable card. 
                                                                             #Prioritizing value information over color of a card. 
     print(f"\nThe playerWhoHints is: {playerWhoHints}")
     playersArr = [p for p in range(numPlayers)]
@@ -346,7 +346,7 @@ def hintUnkown(hintTable, tableCards, playerWhoHints, players):             #Tel
                 if not foundValue and foundColor:                                                       #in hintTable and in the players hand
                     return p, players[p].hand[slot].value
                 elif foundValue and not foundColor:
-                    return p, players[p].hand[slot].color                               #TODO: Check that card_index+1 matches card value when hinted/played
+                    return p, players[p].hand[slot].color                               
                 elif not foundColor and not foundValue:
                     return p, players[p].hand[slot].value                                                                    #TODO: Test, debug and check
             else:
@@ -408,7 +408,6 @@ def hintUseless(hintTable, playerWhoHints, players, tableCards):                
     return None, 0                                                                              #TODO: Test, debug and check
 
 def hintFives(hintTable, playerWhoHints, players):
-
     playersArr = [p for p in range(numPlayers)]
     playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]  
     random.shuffle(playersArr)
@@ -454,6 +453,39 @@ def hintMostInfo(hintTable, playerWhoHints, players):                       #Hin
         return p, next(iter(sortedColor.keys()))
     else:                                                                                       #TODO: Test, debug and check
         return p, next(iter(sortedValue.keys()))
+
+def hintRandom(hintTable, playerWhoHints, players):
+    playersArr = [p for p in range(numPlayers)]
+    playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]  
+    
+    p = random.choice(playersArr)
+
+    randomColor = random.choice(colorsName)
+    randomValue = random.choice([v for v in range(1,6)])                                        #TODO: Test, debug and check
+
+    return p, random.choice([randomColor, randomValue])                #TODO: manage how do we know at the other end if we hint value or color
+
+def hintUnkown(hintTable, tableCards, playerWhoHints, players):         #Hint new info to a player about its cards. 
+                                                                        #The card might not be playable. Differently, in hintUseful the card IS playable
+    playersArr = [p for p in range(numPlayers)]
+    playersArr = playersArr - playersArr[playerWhoHints]  
+    random.shuffle(playersArr)
+
+    for p in playersArr:
+        for slot in range(slots):
+            foundValue = any(el == 1 for el in hintTable[p][slot].values.values())
+            foundColor = any(el == 1 for el in hintTable[p][slot].colors.values())
+            if not foundValue and foundColor:                                       #in hintTable and in the players hand
+                return p, players[p].hand[slot].value
+            elif foundValue and not foundColor:
+                return p, players[p].hand[slot].color                               
+            elif not foundColor and not foundValue:
+                return p, players[p].hand[slot].value                                                                    #TODO: Test, debug and check
+            else:
+                continue
+
+    return None, 0
+
 
 #--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#
 
