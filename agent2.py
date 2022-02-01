@@ -221,6 +221,13 @@ tableCards = {}     # dict for storing the stacks of cards on the table
 
 colorDict = {0:'red', 1:'green', 2:'blue', 3:'yellow', 4:'white'}
 colorsName= ['red', 'green', 'blue', 'yellow', 'white']
+
+discardedCards = {c:[0, 0, 0, 0, 0] for c in colorDict}
+uselessCards = {c:0 for c in colorDict}
+
+CARD_LIMIT = [3, 2, 2, 2, 1]    #3 one's for every color, 2 two's, three's and four's, and 1 five's
+
+
 #########  RULES HERE JUST TO TEST, THEN TO BE MOVED TO rules.py  ###########
 
 def playIfCertain(playerNum: int, hintTable):
@@ -241,9 +248,10 @@ def playIfCertain(playerNum: int, hintTable):
                     return slot
                 else:
                     print("The card is NOT playable")
-                    return False
+                    continue
             except ValueError:
                 print(f"ifCertain: No known card value in slot: {slot}")
+                continue
                                         # In this case, we are playing the first playable card
                                         # of the player, there maybe more than one, we can make
                                         # an array and then by some metric (or random) choose one
@@ -252,8 +260,8 @@ def isPlayable(cardNum, cardColor, tableCards) -> bool:       #based on the 5 st
     # print(f"The tableCards at isPlayable is: {tableCards}")
     # print(f"tableCards[cardColor]: {tableCards[cardColor]} , len(tableCards[cardColor]): {len(tableCards[cardColor])}")
     # print(f"cardNum: {cardNum} , cardColor: {cardColor}")
-    if(len(tableCards[cardColor])==cardNum-1):          #TODO: Check if its possible that there are empty places in the array that throws the len() calculation
-        print("I can play the card")
+    if(len(tableCards[cardColor])==cardNum-1):          #TODO: Check if its possible that there ar/can be empty places in the array that throws off the len() calculation
+        print("I can play the card")                    #TODO: Check if need this function to say if its NOW playable (like it works now), or to say if it can be played in the future
         return True
 
     return False
@@ -274,6 +282,7 @@ def playSafeCard(hintTable, tableCards):        #we know just know the number of
                 cardsNum.append(possibleCards) 
         except ValueError:
             print(f"No known card value in slot: {slot}")
+            continue
     if(cardsNum):    
         return cardsNum[0]       #return the first card to be playable. There can be many, we may choose by some metric                  
     else:
@@ -486,8 +495,204 @@ def hintUnkown(hintTable, tableCards, playerWhoHints, players):         #Hint ne
 
     return None, 0
 
+def discardUseless(player, hintTable):
 
+    for slot in range(slots):
+        if(any(el == 1 for el in hintTable[slot].values.values())
+                and any(el == 1 for el in hintTable[slot].colors.values())):
+
+            try:
+                cardNum = list(hintTable[slot].values.values()).index(1)+1
+                cardColor = colorDict[list(hintTable[slot].colors.values()).index(1)]
+                print(f"cardNum: {cardNum} , cardColor: {cardColor}")
+                if(uselessCards[cardColor] >= cardNum):
+                    print("The card is discardable")
+                    return slot
+                else:
+                    print("The card is NOT discardable")
+                    continue
+            except ValueError:
+                print(f"discardUseless: No known card value in slot: {slot}")
+                continue
+                                        # In this case, we are discarding the first discardable card
+                                        # of the player, there maybe more than one, we can make
+                                        # an array and then by some metric (or random) choose one
+
+    return None
+
+def discardIfCertain(player, hintTable):
+
+    for slot in range(slots):
+        if(any(el == 1 for el in hintTable[slot].values.values())
+                and any(el == 1 for el in hintTable[slot].colors.values())):
+
+            try:
+                cardNum = list(hintTable[slot].values.values()).index(1)+1
+                cardColor = colorDict[list(hintTable[slot].colors.values()).index(1)]
+                print(f"cardNum: {cardNum} , cardColor: {cardColor}")
+                if(not isPlayable(cardNum, cardColor, tableCards)):
+                    print("The card is not playable = discardable")
+                    return slot
+                else:
+                    print("The card is playable = NOT discardable")
+                    continue
+            except ValueError:
+                print(f"discardNoPlayable: No known card value in slot: {slot}")
+                continue
+
+    return None
+
+def discardUselessNotPlayable(player, hintTable):
+
+    for slot in range(slots):
+        if(any(el == 1 for el in hintTable[slot].values.values())
+                and any(el == 1 for el in hintTable[slot].colors.values())):
+
+            try:
+                cardNum = list(hintTable[slot].values.values()).index(1)+1
+                cardColor = colorDict[list(hintTable[slot].colors.values()).index(1)]
+                print(f"cardNum: {cardNum} , cardColor: {cardColor}")
+                if(not isPlayable(cardNum, cardColor, tableCards)):
+                    print("The card is not playable = discardable")
+                    return slot
+                if len(tableCards[cardColor]) == 4:                  #TODO: Check if its possible that there ar/can be empty places in the array that throws off the len() calculation
+                    return slot                 #the stack of that color has been completed, any other card of that color can be discarded
+                if(uselessCards[cardColor] >= cardNum):
+                    print("The card is discardable")
+                    return slot
+                else:
+                    print("The card is playable = NOT discardable")
+                    continue
+            except ValueError:
+                print(f"discardNoPlayable: No known card value in slot: {slot}")
+                continue
+
+    return None
+
+def discardHighest(player, hintTable):                  #Discards card in hand with highest known value
+
+    slotToDiscard = 0
+
+    for slot in range(slots):
+        if any(el == 1 for el in hintTable[slot].values.values()):
+            try:
+                cardNum = list(hintTable[slot].values.values()).index(1)+1
+                if cardNum > slotToDiscard:
+                    slotToDiscard = cardNum
+            except ValueError:
+                print(f"discardNoPlayable: No known card value in slot: {slot}")
+                continue
+    if slotToDiscard == 0:
+        print("discardHighest: No known card to discard")
+        return None
+    else:
+        return slotToDiscard
+
+def discardOldestNotPlayable(player, hintTable):
+
+    slotToDiscard = 0
+    age = 0
+
+    for slot in range(slots):
+        if(any(el == 1 for el in hintTable[slot].values.values())
+                and any(el == 1 for el in hintTable[slot].colors.values())):
+            try:
+                cardNum = list(hintTable[slot].values.values()).index(1)+1
+                cardColor = colorDict[list(hintTable[slot].colors.values()).index(1)]
+                print(f"cardNum: {cardNum} , cardColor: {cardColor}")
+                if(not isPlayable(cardNum, cardColor, tableCards)):
+                    if hintTable[slot].age > age:
+                        age = hintTable[slot].age
+                        slotToDiscard = slot
+                else:
+                    continue
+            except ValueError:
+                print(f"discardOldestNotPlayable: No known card value in slot: {slot}")
+                continue
+
+    if slotToDiscard == 0:
+        print("discardOldest: No known card to discard")
+        return None
+    else:
+        return slotToDiscard
+
+def discardOldest(player, hintTable):
+
+    slotToDiscard = 0
+    age = 0
+
+    for slot in range(slots):
+        if hintTable[slot].age > age:
+            age = hintTable[slot].age
+            slotToDiscard = slot
+
+    if slotToDiscard == 0:
+        print("discardOldest: No known card to discard")
+        return None
+    else:
+        return slotToDiscard
+
+def discardNoInfo(player, hintTable):
+
+    slotsToDiscard = []
+
+    for slot in range(slots):
+        if(not any(el == 1 for el in hintTable[slot].values.values())
+            and not any(el == 1 for el in hintTable[slot].colors.values())):
+
+            slots.append(slot)
+
+    if slotsToDiscard:
+        return random.choice(slotsToDiscard)
+    else:
+        return None
+
+def discardLeastLikelyToBeNecessary(player, hintTable,tableCards):
+
+    _slots = [s for s in range(slots)]
+    necessarySlots = []
+    notPlayableSlots = []
+
+    for slot in _slots:
+        if(any(el == 1 for el in hintTable[slot].values.values())
+                and any(el == 1 for el in hintTable[slot].colors.values())):
+            try:
+                cardNum = list(hintTable[slot].values.values()).index(1)+1
+                cardColor = colorDict[list(hintTable[slot].colors.values()).index(1)]
+                
+                if len(tableCards[cardColor]) < cardNum:                                    #Card may be playable in the future
+                    if discardedCards[cardColor][cardNum]+1 == CARD_LIMIT[cardNum-1]:       #Test if the card is the last of its kind.  
+                        necessarySlots.append(slot)                                         #For this, I see if the discardedCards of that card are one from being all discarded/used
+                else:
+                    notPlayableSlots.append(slot)
+                    continue
+            except ValueError:
+                print(f"discardLeastLikelyToBeNecessary: No known card value in slot: {slot}")
+                continue
+
+    notNecessarySlots = [s for s in _slots if s not in [*necessarySlots, *notPlayableSlots]]
+
+    if (notPlayableSlots):
+        return random.choice(notPlayableSlots)
+    else:
+        return None
+
+
+def DiscardProbablyUselessCard():
+                #TODO: To be done. Look def in framework
+    return None
 #--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#
+
+def updateDiscardedUselessCards(cardDiscarded):
+
+    """ Updates the discardedCards dict that holds a counter for the numberof time each card (value & color) is discarded.
+        Also, updates the uslessCards dict that has for every color the value of the card for which all cards of that (value&color) had been discarded"""
+
+    discardedCards[cardDiscarded.color][cardDiscarded.value-1] += 1
+
+    if (discardedCards[cardDiscarded.color][cardDiscarded.value-1] >= CARD_LIMIT[cardDiscarded.value-1]) and cardDiscarded.value > uselessCards[cardDiscarded.color]:
+
+        uselessCards[cardDiscarded.color] = cardDiscarded.value
 
 
 def hintTableInit():
@@ -645,6 +850,8 @@ def main():
                 res = manageDiscardResponse(data)
                 if res:
                     manageHintTableUpdate(client, discardOrder)
+                    updateDiscardedUselessCards(data.card)
+                
                 for c in range(numPlayers):
                     if c == client:
                         continue
