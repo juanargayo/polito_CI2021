@@ -519,10 +519,10 @@ def hintUnkown(hintTable, playerWhoHints, players):
 # Discards cards whose pre-requisites have been discarded.
 # Assumption: I need to know the value to know the prerequisite
 def discardUseless(hintTable, discarded, slots):
+    print("discardUseless Rule")
     for slot in range(slots):
         val = findKnown(hintTable[slot].values)
         col = findKnown(hintTable[slot].colors)
-
         if val != None:
             # value 1 doesn't have prerequisites..
             if val == 1:
@@ -541,6 +541,7 @@ def discardUseless(hintTable, discarded, slots):
 
 # Discards that is no longer playable.
 def discardSafe(hintTable, tableCards, slots):
+    print("discardSafe Rule")
     safe = False
     for slot in range(slots):
         val = findKnown(hintTable[slot].values)
@@ -557,6 +558,7 @@ def discardSafe(hintTable, tableCards, slots):
 
 # Discards a card that is useless or safe.
 def discardUselessSafe(hintTable, tableCards, discarded, slots):
+    print("discardUselessSafe Rule")
     for slot in range(slots):
         val = findKnown(hintTable[slot].values)
         col = findKnown(hintTable[slot].colors)
@@ -578,6 +580,82 @@ def discardUselessSafe(hintTable, tableCards, discarded, slots):
                 return slot
     return None
 
+
+# Discards a card that with fully known information and no longer playable
+# (same as discardSafe but with just fully known information)
+def discardIfCertain(hintTable, tableCards, slots):
+    print("discardIfCertain Rule")
+    for slot in range(slots):
+        val = findKnown(hintTable[slot].values)
+        col = findKnown(hintTable[slot].colors)
+        if val != None and col != None:
+            if(len(tableCards[col]) >= val):
+                return slot
+    return None
+
+# Discards card in hand with highest known value
+def discardHighest(hintTable, slots):
+    print("discardHighest Rule")
+    slotToDiscard = 0
+    for slot in range(slots):
+        val = findKnown(hintTable[slot].values)
+        if val == None:
+            continue
+        if val > slotToDiscard:
+            slotToDiscard = val
+    if slotToDiscard == 0:
+        return None
+    else:
+        return slotToDiscard
+
+# Discards oldest card in hand.
+def discardOldest(hintTable, slots):
+    print("discardOldest Rule")
+    slotToDiscard = 0
+    age = 0
+    for slot in range(slots):
+        if hintTable[slot].age > age:
+            age = hintTable[slot].age
+            slotToDiscard = slot
+
+    if slotToDiscard == 0:
+        print("discardOldest: No known card to discard")
+        return None
+    else:
+        return slotToDiscard
+
+
+#Discards a card with no known information
+def discardNoInfo(hintTable, slots):
+    print("discardNoInfo Rule")
+    slotsToDiscard = []
+    for slot in range(slots):
+        val = findKnown(hintTable[slot].values)
+        col = findKnown(hintTable[slot].colors)
+        if val == None and col == None:
+            slotsToDiscard.append(slot)
+    if slotsToDiscard:
+        return random.choice(slotsToDiscard)
+    else:
+        return None
+
+# Discards oldest card with no known information
+def discardNoInfoOldest(hintTable, slots):
+    print("discardOldest Rule")
+    slotToDiscard = 0
+    age = 0
+    for slot in range(slots):
+        val = findKnown(hintTable[slot].values)
+        col = findKnown(hintTable[slot].colors)
+        if val == None and col == None:
+            if hintTable[slot].age > age:
+                age = hintTable[slot].age
+                slotToDiscard = slot
+    if slotToDiscard == 0:
+        print("discardOldest: No known card to discard")
+        return None
+    else:
+        return slotToDiscard
 
 # Array of rule functions
 rules = [playIfCertain, playSafeCard, playProbablySafeCard,
