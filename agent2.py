@@ -14,6 +14,7 @@ import time
 from constants import DATASIZE
 from game import Card
 from cardhints import CardHints
+from rules import hintOnes, hintPartiallyKnown, hintUseful, playProbablySafeCard, playIfCertain, playSafeCard
 
 HOST = ''
 PORT = 1024
@@ -123,13 +124,15 @@ def managePlayResponse(data):
     if type(data) is GameData.ServerPlayerMoveOk:
         print("Nice move!")
         print("Current player: " + data.player)
-        print(f"card played: {(data.card).toString()} , card.value: {data.card.value}")
+        print(
+            f"card played: {(data.card).toString()} , card.value: {data.card.value}")
         # print(f"cardColor: {data.card.color}")
         # print(f"lastPlayer: {data.lastPlayer} player: {data.player} handLength: {data.handLength}")
         return 1
     if type(data) is GameData.ServerPlayerThunderStrike:
         print("OH NO! The Gods are unhappy with you!")
-        print(f"card played: {(data.card).toString()} , card.value: {data.card.value}")
+        print(
+            f"card played: {(data.card).toString()} , card.value: {data.card.value}")
         return -1
     if type(data) is GameData.ServerGameOver:
         print(data.message)
@@ -200,13 +203,26 @@ def manageHintTableUpdate(playerNum: int, slotNum: int):
     hintTable[playerNum].pop(slotNum)
     hintTable[playerNum].append(CardHints(slots))
 
+# based on the 5 stacks of cards, says if one card is playable
+
+
+def isPlayable(cardNum, cardColor, tableCards) -> bool:
+    # print(f"The tableCards at isPlayable is: {tableCards}")
+    # print(f"tableCards[cardColor]: {tableCards[cardColor]} , len(tableCards[cardColor]): {len(tableCards[cardColor])}")
+    # print(f"cardNum: {cardNum} , cardColor: {cardColor}")
+    # TODO: Check if its possible that there are empty places in the array that throws the len() calculation
+    if(len(tableCards[cardColor]) == cardNum-1):
+        print("I can play the card")
+        return True
+    return False
+
 
             
 
 
 run = True
 
-numPlayers = 3
+numPlayers = 2
 slots = getNumSlots(numPlayers)
 
 statuses = ["Lobby", "Game", "GameHint"]
@@ -214,8 +230,8 @@ statuses = ["Lobby", "Game", "GameHint"]
 status = statuses[0]
 cards = []
 
-hintTable = [[0 for x in range(getNumSlots(numPlayers))] 
-                for y in range(numPlayers)]        # Array of shape H=[#Players][#Slots]
+hintTable = [[0 for x in range(getNumSlots(numPlayers))]
+             for y in range(numPlayers)]        # Array of shape H=[#Players][#Slots]
 
 tableCards = {}     # dict for storing the stacks of cards on the table
 
@@ -230,138 +246,9 @@ CARD_LIMIT = [3, 2, 2, 2, 1]    #3 one's for every color, 2 two's, three's and f
 
 #########  RULES HERE JUST TO TEST, THEN TO BE MOVED TO rules.py  ###########
 
-def playIfCertain(playerNum: int, hintTable):
-    # ok to import them? is there a better way?
-    for slot in range(getNumSlots(numPlayers)):
-        if(any(el == 1 for el in hintTable[slot].values.values())
-                and any(el == 1 for el in hintTable[slot].colors.values())):
-            # print(f"Found playable card for slot number {slot}:")
-            # print(f"the type(hintTable[slot].values.values()): {type(hintTable[slot].values.values())}")
-            # print(f"list(hintTable[slot].values.values()).index(1)+1: {list(hintTable[slot].values.values()).index(1)+1}")
-            # print(f"list(hintTable[slot].colors.values()).index(1): {list(hintTable[slot].colors.values()).index(1)}")
-            try:
-                cardNum = list(hintTable[slot].values.values()).index(1)+1
-                cardColor = colorDict[list(hintTable[slot].colors.values()).index(1)]
-                print(f"cardNum: {cardNum} , cardColor: {cardColor}")
-                if(isPlayable(cardNum, cardColor, tableCards)):
-                    print("The card is playable")
-                    return slot
-                else:
-                    print("The card is NOT playable")
-                    continue
-            except ValueError:
-                print(f"ifCertain: No known card value in slot: {slot}")
-                continue
-                                        # In this case, we are playing the first playable card
-                                        # of the player, there maybe more than one, we can make
-                                        # an array and then by some metric (or random) choose one
 
-def isPlayable(cardNum, cardColor, tableCards) -> bool:       #based on the 5 stacks of cards, says if one card is playable
-    # print(f"The tableCards at isPlayable is: {tableCards}")
-    # print(f"tableCards[cardColor]: {tableCards[cardColor]} , len(tableCards[cardColor]): {len(tableCards[cardColor])}")
-    # print(f"cardNum: {cardNum} , cardColor: {cardColor}")
-    if(len(tableCards[cardColor])==cardNum-1):          #TODO: Check if its possible that there ar/can be empty places in the array that throws off the len() calculation
-        print("I can play the card")                    #TODO: Check if need this function to say if its NOW playable (like it works now), or to say if it can be played in the future
-        return True
 
-    return False
 
-def playSafeCard(hintTable, tableCards):        #we know just know the number of the card. It searches
-                                                #for a slot it can be placed, regardless of the color
-    cardsNum = []
-    for slot in range(getNumSlots(numPlayers)):
-        try:
-            #print(list(hintTable[slot].values.values()))
-            possibleCards = list(hintTable[slot].values.values()).index(1)+1                            #TODO: Check that card_index+1 matches card value when hinted/played
-            print(f"list comp {[possibleCards==len(tableCards[colorDict[x]])+1 for x in range(5)]}")
-            # for x in range(5): 
-            #     print(f"tablecard[{x}]: {tableCards[colorDict[x]]}")
-            # print(f"possibleCards-1: {possibleCards-1} ")
-            if(any(possibleCards==len(tableCards[colorDict[x]])+1 for x in range(5))):
-                print(f"possibleCardsFound: {possibleCards} and tableCards: {tableCards}")
-                cardsNum.append(possibleCards) 
-        except ValueError:
-            print(f"No known card value in slot: {slot}")
-            continue
-    if(cardsNum):    
-        return cardsNum[0]       #return the first card to be playable. There can be many, we may choose by some metric                  
-    else:
-        return None
-
-def hintPartiallyKnown(hintTable, tableCards, playerWhoHints, players):      #I hint a card that IS playable, which the player just knows the color or the value
-
-    print(f"\nThe playerWhoHints is: {playerWhoHints}")
-    playersArr = [p for p in range(numPlayers)]
-    playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]  
-    print(f"players after slicing: {playersArr}\n")
-    
-    for p in playersArr:
-        for slot in range(slots):
-            foundValue = any(el == 1 for el in hintTable[p][slot].values.values())
-            foundColor = any(el == 1 for el in hintTable[p][slot].colors.values())
-
-            if(isPlayable(players[p].hand[slot].value, players[p].hand[slot].color, tableCards)):       #TODO: Check correspondance between cards 
-                if foundValue and not foundColor:                                                       #in hintTable and in the players hand
-                    return p, players[p].hand[slot].color
-                elif not foundValue and foundColor:
-                    return p, players[p].hand[slot].value                                       #TODO: Check that card_index+1 matches card value when hinted/played
-                else:
-                    continue                                                                    #TODO: Test, debug and check
-            else:
-                continue
-    
-    return None, 0
-
-def hintOnes(hintTable, playerWhoHints, players):                   #Hints cards with value one to the player that has the most of them
-
-    print(f"\nThe playerWhoHints is: {playerWhoHints}")
-    playersArr = [p for p in range(numPlayers)]
-    playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]  
-    print(f"players after slicing: {playersArr}\n")
-    
-    maxOnePlayer = None, 0      #FIrst value: player number, Second value: amount of one cards in his hand
-
-    for p in playersArr:
-        onesCount = 0
-        for slot in range(slots):
-            if hintTable[p][slot].values.values()[1] == 1:   #position number 0 in hintTable has the info of card value 1
-                continue           #The player p already knows about this one. See other slots
-            if players[p].hand[slot].value == 1:
-                onesCount += 1
-        if onesCount > maxOnePlayer[1]:
-            maxOnePlayer[0] = p
-            maxOnePlayer[1] = onesCount                                         #TODO: Test, debug and check
-
-    if maxOnePlayer[1] > 0:
-        return maxOnePlayer[0], 1
-    else:
-        return None, 0      #no player with one-value cards found
-
-def hintUseful(hintTable, tableCards, playerWhoHints, players):             #Tell anoyone about some useful info of a playable card. 
-                                                                            #Prioritizing value information over color of a card. 
-    print(f"\nThe playerWhoHints is: {playerWhoHints}")
-    playersArr = [p for p in range(numPlayers)]
-    playersArr = playersArr - playersArr[playerWhoHints]  
-    print(f"players after slicing: {playersArr}\n")
-    random.shuffle(playersArr)
-    print(f"players after shuffle: {playersArr}\n")
-
-    for p in playersArr:
-        for slot in range(slots):
-            foundValue = any(el == 1 for el in hintTable[p][slot].values.values())
-            foundColor = any(el == 1 for el in hintTable[p][slot].colors.values())
-
-            if isPlayable(players[p].hand[slot].value, players[p].hand[slot].color, tableCards):       #TODO: Check correspondance between cards 
-                if not foundValue and foundColor:                                                       #in hintTable and in the players hand
-                    return p, players[p].hand[slot].value
-                elif foundValue and not foundColor:
-                    return p, players[p].hand[slot].color                               
-                elif not foundColor and not foundValue:
-                    return p, players[p].hand[slot].value                                                                    #TODO: Test, debug and check
-            else:
-                continue
-
-    return None, 0
 
 def hintOld(hintTable, playerWhoHints, players, tableCards):            #Chooses a random player and hints him the oldest card it has
     playersArr = [p for p in range(numPlayers)]
@@ -745,25 +632,32 @@ def main():
             game = commandShow(playerName, s)
             players = game.players
             tableCards = game.tableCards
-            print(f"players[client]: {players[client].toString()} players[1].hand: {players[client].hand}")
 
             print(f"the tableCards are: {tableCards}")
+            
+            updateCardsAge(hintTable)        #increment all the cards' age in the hand of players by one
 
-            updateCardsAge()        #increment all the cards' age in the hand of players by one
+           
+            # time.sleep(40000)
 
             # 1. think a move (All players hinting if possible,  but player1)
             # move = "hint" if (
             #     playerName != "player1" and game.usedNoteTokens < 8) else "discard"
-            move = "hint" if client % 2 == 0 and playerName != "player1" and game.usedNoteTokens < 8 else "play"    #just to test and alternate
-
+            #move = "hint" if client % 2 == 0 and playerName != "player1" and game.usedNoteTokens < 8 else "play"    #just to test and alternate
+            move = "hint"
+            
+            handSize = game.handSize
+            print("HANDSIZE: ", game.handSize)
             
             # 2. take action
             if move == "play":
 
                 # (PLAY ALWAYS CARD 0)
-
-                #probableSlot = playIfCertain(client, hintTable[client])
-                probableSlot = playSafeCard(hintTable[client], tableCards)
+                
+                probableSlot = playIfCertain(client, hintTable[client], tableCards, handSize)
+                #probableSlot = playSafeCard(hintTable[client], tableCards, handSize)
+                #probableSlot = playProbablySafeCard(client, hintTable[client], handSize, game.tableCards, [
+                #               x.hand for x in players], game.discardPile)
 
                 print(f"probableSlot: {probableSlot}")
 
@@ -784,26 +678,31 @@ def main():
                 # This means game ended, so.. restart
                 if res == 0:
                     hintTableInit()
-                    print("Start new game")
+                    print("Start new game" + "\n"*10)
+                    time.sleep(5)
                     #run = False
                     break
 
                 # shift hint slot when playing a card
-                manageHintTableUpdate(client, cardPos)      
+                manageHintTableUpdate(client, cardPos) 
+                time.sleep(2)     
 
             elif move == "hint":
                 # (GIVE HINT)
                 # 1. send a request
 
-                hintPartiallyKnown(hintTable, tableCards, client)
+                # dest, value = hintPartiallyKnown(hintTable, tableCards, client, players)
+                # typ = "value" if type(value) == int else "color"
+                
+                # dest, value = hintOnes(hintTable, client, players, handSize )
+                dest, value = hintUseful(hintTable, tableCards, client, players)
+                if dest:
+                    typ = "value"
+                    dest = "player"+str(dest)
 
-                cardPos = 0
-                typ = "value"
-                dest = "player1"
 
-                # value? => Find value of the first card of player1 (just for the moment)
-                value = players[1].hand[0].value if typ == "value" else players[1].hand[0].color
-                print(value)
+
+                
 
                 # Send request
                 s.send(GameData.ClientHintData(
@@ -861,6 +760,8 @@ def main():
                 # this means GameOver
                 if res == 0:
                     break
+            time.sleep(8)
+            it+=1
 
 
 if (__name__ == "__main__"):
