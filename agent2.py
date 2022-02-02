@@ -222,8 +222,8 @@ tableCards = {}     # dict for storing the stacks of cards on the table
 colorDict = {0:'red', 1:'green', 2:'blue', 3:'yellow', 4:'white'}
 colorsName= ['red', 'green', 'blue', 'yellow', 'white']
 
-discardedCards = {c:[0, 0, 0, 0, 0] for c in colorDict}
-uselessCards = {c:0 for c in colorDict}
+discardedCards = {c:[0, 0, 0, 0, 0] for c in colorsName}
+uselessCards = {c:0 for c in colorsName}
 
 CARD_LIMIT = [3, 2, 2, 2, 1]    #3 one's for every color, 2 two's, three's and four's, and 1 five's
 
@@ -685,16 +685,25 @@ def DiscardProbablyUselessCard():
 
 def updateDiscardedUselessCards(cardDiscarded):
 
-    """ Updates the discardedCards dict that holds a counter for the numberof time each card (value & color) is discarded.
-        Also, updates the uslessCards dict that has for every color the value of the card for which all cards of that (value&color) had been discarded"""
+    """ Updates the discardedCards dict that holds a counter for the number of times each card (value & color) is discarded.
+        Also, updates the uselessCards dict that has for every color the value of the card for which all cards of that (value&color) had been discarded"""
+
+    print(f"\ncardDiscarded: v:{cardDiscarded.value} c:{cardDiscarded.color}")
+
+    print(f"before discardedCards: {discardedCards}")
 
     discardedCards[cardDiscarded.color][cardDiscarded.value-1] += 1
+
+    print(f"\nafter discardedCards: {discardedCards}")
+
+    print(f"before uselessCards: {uselessCards}")
+
 
     if (discardedCards[cardDiscarded.color][cardDiscarded.value-1] >= CARD_LIMIT[cardDiscarded.value-1]) and cardDiscarded.value > uselessCards[cardDiscarded.color]:
 
         uselessCards[cardDiscarded.color] = cardDiscarded.value
-
-
+        print(f"after uselessCards: {uselessCards}")
+    
 def hintTableInit():
     global numPlayers
     global hintTable
@@ -749,13 +758,14 @@ def main():
 
             print(f"the tableCards are: {tableCards}")
 
-            updateCardsAge()        #increment all the cards' age in the hand of players by one
+            updateCardsAge(hintTable)        #increment all the cards' age in the hand of players by one
 
             # 1. think a move (All players hinting if possible,  but player1)
             # move = "hint" if (
             #     playerName != "player1" and game.usedNoteTokens < 8) else "discard"
-            move = "hint" if client % 2 == 0 and playerName != "player1" and game.usedNoteTokens < 8 else "play"    #just to test and alternate
+            #move = "hint" if client % 2 == 0 and playerName != "player1" and game.usedNoteTokens < 8 else "play"    #just to test and alternate
 
+            move = "discard"
             
             # 2. take action
             if move == "play":
@@ -795,7 +805,7 @@ def main():
                 # (GIVE HINT)
                 # 1. send a request
 
-                hintPartiallyKnown(hintTable, tableCards, client)
+                hintPartiallyKnown(hintTable, tableCards, client, players)
 
                 cardPos = 0
                 typ = "value"
@@ -843,6 +853,28 @@ def main():
                 # 4. Remember to update info after play or discard (done)
 
             elif move == "discard":
+
+                #--#--#--#--#--#--#--#-- JUST FOR TESTING #--#--#--#--#--#--
+                hintTable[1][0].directHintColor('red')
+                hintTable[1][0].directHintValue(4)                  
+
+                hintTable[1][1].directHintColor('red')
+                hintTable[1][1].directHintValue(4)
+
+                hintTable[1][2].directHintColor('red')
+                hintTable[1][2].directHintValue(3)
+      
+                cardToHint = Card(87, 4, "red")
+
+                updateDiscardedUselessCards(cardToHint)     #simulate it was discarded 2 times
+                updateDiscardedUselessCards(cardToHint)
+
+                cardToDiscard = discardUseless(client, hintTable[client])
+
+                print (f"the card to discard is: {cardToDiscard}")
+
+                #--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--#--
+
                 discardOrder = 4
                 s.send(GameData.ClientPlayerDiscardCardRequest(
                     playerName, discardOrder).serialize())
