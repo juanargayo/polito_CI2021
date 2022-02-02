@@ -3,7 +3,7 @@ import numpy as np
 
 class CardHints:
 
-    colors = ['red', 'green', 'blue', 'yellow', 'white']
+    colors = ['red', 'yellow', 'green', 'blue', 'white']
 
     # When I start every cell is 0, this means that I have no information about the card in this slot (it could be every number and every color)
     def __init__(self, numSlots):   #remove numSlots
