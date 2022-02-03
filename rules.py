@@ -594,8 +594,6 @@ def discardIfCertain(hintTable, tableCards, slots):
     return None
 
 # Discards card in hand with highest known value
-
-
 def discardHighest(hintTable, slots):
     print("discardHighest Rule")
     slotToDiscard = 0
@@ -611,8 +609,6 @@ def discardHighest(hintTable, slots):
         return slotToDiscard
 
 # Discards oldest card in hand.
-
-
 def discardOldest(hintTable, slots):
     print("discardOldest Rule")
     slotToDiscard = 0
@@ -629,7 +625,7 @@ def discardOldest(hintTable, slots):
         return slotToDiscard
 
 
-# Discards a card with no known information
+#Discards a card with no known information
 def discardNoInfo(hintTable, slots):
     print("discardNoInfo Rule")
     slotsToDiscard = []
@@ -644,8 +640,6 @@ def discardNoInfo(hintTable, slots):
         return None
 
 # Discards oldest card with no known information
-
-
 def discardNoInfoOldest(hintTable, slots):
     print("discardOldest Rule")
     slotToDiscard = 0
@@ -662,7 +656,7 @@ def discardNoInfoOldest(hintTable, slots):
         return None
     else:
         return slotToDiscard
-
+        
 
 # Array of rule functions
 rules = [playIfCertain, playSafeCard, playProbablySafeCard,
