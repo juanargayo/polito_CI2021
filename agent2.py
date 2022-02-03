@@ -245,41 +245,6 @@ CARD_LIMIT = [3, 2, 2, 2, 1]
 #########  RULES HERE JUST TO TEST, THEN TO BE MOVED TO rules.py  ###########
 
 
-def discardLeastLikelyToBeNecessary(player, hintTable, tableCards):
-
-    _slots = [s for s in range(slots)]
-    necessarySlots = []
-    notPlayableSlots = []
-
-    for slot in _slots:
-        if(any(el == 1 for el in hintTable[slot].values.values())
-                and any(el == 1 for el in hintTable[slot].colors.values())):
-            try:
-                cardNum = list(hintTable[slot].values.values()).index(1)+1
-                cardColor = colorDict[list(
-                    hintTable[slot].colors.values()).index(1)]
-
-                # Card may be playable in the future
-                if len(tableCards[cardColor]) < cardNum:
-                    # Test if the card is the last of its kind.
-                    if discardedCards[cardColor][cardNum]+1 == CARD_LIMIT[cardNum-1]:
-                        # For this, I see if the discardedCards of that card are one from being all discarded/used
-                        necessarySlots.append(slot)
-                else:
-                    notPlayableSlots.append(slot)
-                    continue
-            except ValueError:
-                print(
-                    f"discardLeastLikelyToBeNecessary: No known card value in slot: {slot}")
-                continue
-
-    notNecessarySlots = [s for s in _slots if s not in [
-        *necessarySlots, *notPlayableSlots]]
-
-    if (notPlayableSlots):
-        return random.choice(notPlayableSlots)
-    else:
-        return None
 
 
 def DiscardProbablyUselessCard():
@@ -440,6 +405,7 @@ def main():
                 #dest, value = hintOld(hintTable, tableCards, client, players)
                 #dest, value = hintPlayable(hintTable, tableCards, client, players)
                 #dest, value = hintUseless(hintTable, tableCards, client, players)
+                
                 # dest, value = hintFives(hintTable, client, players)
                 # dest, value = hintMostInfo(hintTable, client, players)
                 # dest, value = hintMostInfo2(hintTable, client, players)

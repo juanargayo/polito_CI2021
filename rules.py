@@ -1,5 +1,4 @@
 
-
 from ast import If
 from audioop import mul
 import collections
@@ -449,14 +448,14 @@ def hintMostInfo2(hintTable, playerWhoHints, players):
     maxInfo = None
     for col in colorsName:
         mi += len([card.value for slot, card in enumerate(players[p].hand)
-                   if card.color == col and hintTable[p][slot].colors[card.color] != 1])
+                   if card.color == col and hintTable[p][slot].colors[card.color] == 0])
         if mi > maxCnt:
             maxInfo = col
             maxCnt = mi
     mi = 0
     for v in range(1, 6):
         mi += len([card.value for slot, card in enumerate(players[p].hand)
-                   if card.value == v and hintTable[p][slot].values[card.value] != 1])
+                   if card.value == v and hintTable[p][slot].values[card.value] == 0])
         if mi > maxCnt:
             maxInfo = v
             maxCnt = mi
@@ -576,7 +575,7 @@ def discardUselessSafe(hintTable, tableCards, discarded, slots):
                 n = getNumCards(
                     [prereq], [col], discarded)
                 safe = len(tableCards[col]) >= val
-            if n == 0 and safe:
+            if n == 0 or safe:
                 return slot
     return None
 
@@ -594,6 +593,8 @@ def discardIfCertain(hintTable, tableCards, slots):
     return None
 
 # Discards card in hand with highest known value
+
+
 def discardHighest(hintTable, slots):
     print("discardHighest Rule")
     slotToDiscard = 0
@@ -609,6 +610,8 @@ def discardHighest(hintTable, slots):
         return slotToDiscard
 
 # Discards oldest card in hand.
+
+
 def discardOldest(hintTable, slots):
     print("discardOldest Rule")
     slotToDiscard = 0
@@ -625,7 +628,7 @@ def discardOldest(hintTable, slots):
         return slotToDiscard
 
 
-#Discards a card with no known information
+# Discards a card with no known information
 def discardNoInfo(hintTable, slots):
     print("discardNoInfo Rule")
     slotsToDiscard = []
@@ -640,6 +643,8 @@ def discardNoInfo(hintTable, slots):
         return None
 
 # Discards oldest card with no known information
+
+
 def discardNoInfoOldest(hintTable, slots):
     print("discardOldest Rule")
     slotToDiscard = 0
@@ -656,8 +661,76 @@ def discardNoInfoOldest(hintTable, slots):
         return None
     else:
         return slotToDiscard
-        
+
+
+def discardLeastLikelyToBeNecessary(hintTable, tableCards, slots, discards):
+
+    print("discardUselessSafe Rule")
+    for slot in range(slots):
+        val = findKnown(hintTable[slot].values)
+        col = findKnown(hintTable[slot].colors)
+        safe = False
+        # Osawa
+        if val != None:
+            # value 1 doesn't have prerequisites..
+            if val == 1:
+                continue
+            prereq = val-1
+            if col == None:
+                n = getNumCards(
+                    [prereq], [col for col in colorDict.values()], discards)
+                safe = all([len(tableCards[col]) >= val for col in colorsName])
+
+            else:
+                n = getNumCards(
+                    [prereq], [col], discards)
+                remaining = getNumCards(
+                    [val], [col], discards)
+
+                safe = len(tableCards[col]) >= val
+            if n == 0 or safe:
+                return slot
+        # Cerca tra le carte quella giocabile con più occorrenze
+    return None
+
 
 # Array of rule functions
 rules = [playIfCertain, playSafeCard, playProbablySafeCard,
          hintPartiallyKnown, hintOnes, hintUseful]
+
+
+def discardLeastLikelyToBeNecessary(player, hintTable, tableCards, discardedCards):
+
+    _slots = [s for s in range(slots)]
+    necessarySlots = []
+    notPlayableSlots = []
+
+    for slot in _slots:
+        if(any(el == 1 for el in hintTable[slot].values.values())
+                and any(el == 1 for el in hintTable[slot].colors.values())):
+            try:
+                cardNum = list(hintTable[slot].values.values()).index(1)+1
+                cardColor = colorDict[list(
+                    hintTable[slot].colors.values()).index(1)]
+
+                # Card may be playable in the future
+                if len(tableCards[cardColor]) < cardNum:
+                    # Test if the card is the last of its kind.
+                    if discardedCards[cardColor][cardNum]+1 == CARD_LIMIT[cardNum-1]:
+                        # For this, I see if the discardedCards of that card are one from being all discarded/used
+                        necessarySlots.append(slot)
+                else:
+                    notPlayableSlots.append(slot)
+                    continue
+            except ValueError:
+                print(
+                    f"discardLeastLikelyToBeNecessary: No known card value in slot: {slot}")
+                continue
+
+    notNecessarySlots = [s for s in _slots if s not in [
+        *necessarySlots, *notPlayableSlots]]
+
+    if (notPlayableSlots):
+        return random.choice(notPlayableSlots)
+    else:
+        return None
