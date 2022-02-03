@@ -14,7 +14,7 @@ import time
 from constants import DATASIZE
 from game import Card
 from cardhints import CardHints
-from rules import discardHighest, discardIfCertain, discardNoInfo, discardNoInfoOldest, discardOldest, discardSafe, discardUseless, hintFives, hintMostInfo, hintMostInfo2, hintOld, hintOnes, hintPartiallyKnown, hintPlayable, hintRandom, hintUnkown, hintUseful, hintUseless, playProbablySafeCard, playIfCertain, playSafeCard, playSafeCard2
+from rules import ruleMatch
 
 HOST = ''
 PORT = 1024
@@ -307,6 +307,9 @@ def main():
     # init HintTable => will be updated on hint or play or discard
     hintTableInit()
 
+    rulesArray = [r for r in range(1,22)]
+    random.shuffle(rulesArray)
+
     # START GAME
     it = 0
     while run:
@@ -340,6 +343,13 @@ def main():
                 move = "hint"
             else:
                 move = "play"
+
+            for r in rulesArray:
+                move, cardInfo = ruleMatch(ruleNum=r, playerNum=client, hintTable=hintTable, tableCards=tableCards, 
+                                        slots=slots, others=([p.hand for p in players].remove(players[client].hand)), 
+                                        discards=game.discardPile, p=0.8, playerWhoHints=client, players=players, discarded=game.discardPile)
+                if(move):
+                    break
             # move = "hint" if (
             #     playerName != "player1" and game.usedNoteTokens < 8) else "discard"
 
@@ -356,13 +366,16 @@ def main():
                 # #probableSlot = playSafeCard(hintTable[client], tableCards, handSize)
                 # probableSlot = playSafeCard2(hintTable[client], game.tableCards, handSize, [
                 # x.hand for x in players], game.discardPile)
-                probableSlot = playProbablySafeCard(hintTable[client], game.tableCards, handSize, [
-                    x.hand for x in players], game.discardPile, 0.5)
+                
+                #probableSlot = playProbablySafeCard(hintTable[client], game.tableCards, handSize, [
+                #    x.hand for x in players], game.discardPile, 0.5)
 
-                print(f"probableSlot: {probableSlot}")
+                #print(f"probableSlot: {probableSlot}")
 
-                cardPos = probableSlot if probableSlot else 0
+                #cardPos = probableSlot if probableSlot else 0
                 #cardPos = 0
+
+                cardPos = cardInfo[0]
                 s.send(GameData.ClientPlayerPlayCardRequest(
                     playerName, cardPos).serialize())
                 data = s.recv(DATASIZE)
@@ -410,7 +423,7 @@ def main():
                 # dest, value = hintMostInfo(hintTable, client, players)
                 # dest, value = hintMostInfo2(hintTable, client, players)
                 #dest, value = hintRandom(client, players)
-                dest, value = hintUnkown(hintTable, client, players)
+                """ dest, value = hintUnkown(hintTable, client, players)
                 if dest != None:
                     typ = "value" if type(value) == int else "color"
                     dest = "player"+str(dest)
@@ -420,7 +433,11 @@ def main():
                     dest = "player0"
 
                 print(
-                    f"Sending value \"{value}\" of type \"{typ}\" at dest {dest}")
+                    f"Sending value \"{value}\" of type \"{typ}\" at dest {dest}") """
+                
+                typ = 'color' if type(cardInfo[1]) == str else 'value'
+                dest = cardInfo[0]
+                value = cardInfo[1]
 
                 # Send request
                 s.send(GameData.ClientHintData(
@@ -445,12 +462,12 @@ def main():
                 # hintTable[1][0].directHintValue(1)
 
                 # Just for testing
-                print("\nHINT TABLE (after update):")
+                """ print("\nHINT TABLE (after update):")
                 for slot in range(slots):
                     print(
                         f"values: {hintTable[1][slot].values}")
                     print(
-                        f"colors: {hintTable[1][slot].colors}\n")
+                        f"colors: {hintTable[1][slot].colors}\n") """
 
                 # playableCard = playIfCertain(1, hintTable[1])
                 # print(f"\n the playable card is: {playableCard}")
@@ -468,13 +485,16 @@ def main():
                 # discard = discardIfCertain(
                 #     hintTable[client], tableCards, handSize)
                 #discard = discardHighest(hintTable[client], handSize)
-                discard = discardOldest(hintTable[client], handSize)
+                """ discard = discardOldest(hintTable[client], handSize)
                 discard = discardNoInfo(hintTable[client], handSize)
-                discard = discardNoInfoOldest(hintTable[client], handSize)
+                discard = discardNoInfoOldest(hintTable[client], handSize) """
 
 
-                discard = discard if discard != None else 3
-                print(f"discard", {discard})
+                """ discard = discard if discard != None else 3
+                print(f"discard", {discard}) """
+
+                discard = cardInfo[0]
+
                 #discardOrder = 4
                 s.send(GameData.ClientPlayerDiscardCardRequest(
                     playerName, discard).serialize())

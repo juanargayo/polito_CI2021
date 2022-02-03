@@ -1,10 +1,9 @@
 
-from ast import If
+from ast import If, arguments
 from audioop import mul
 import collections
 import random
-
-from matplotlib.style import available
+#from agent2 import CARD_LIMIT
 from game import Card
 
 import time
@@ -16,10 +15,27 @@ cardsNumber = {1: 3, 2: 2, 3: 2, 4: 2, 5: 1}
 
 # TODO: Check what happens when number of card is decreasing, some rule could break
 
-def ruleMatch(playerNum: int, ruleNum: int, hintTable) -> str:
+def ruleMatch(ruleNum: int, playerNum: int, hintTable, tableCards, slots, others, discards, p, playerWhoHints, players, discarded) -> str:
     # returns cardNumber to be used
-    return rules[ruleNum](playerNum, hintTable)
+    if ruleNum < 3 :
+        cardToPlay = rules[ruleNum](playerNum=playerNum, hintTable=hintTable, tableCards=tableCards, 
+                        slots=slots, others=others, discards=discards, p=p, playerWhoHints=playerWhoHints, players=players, discarded=discarded)
+        return 'play', [cardToPlay]
 
+    elif ruleNum < 13:
+        playerToHint, cardToHint = rules[ruleNum](playerNum=playerNum, hintTable=hintTable, tableCards=tableCards, 
+                        slots=slots, others=others, discards=discards, p=p, playerWhoHints=playerWhoHints, players=players, discarded=discarded)
+        return 'hint', [playerToHint, cardToHint]
+
+    elif ruleNum < 22:
+        cardToDiscard = rules[ruleNum](playerNum=playerNum, hintTable=hintTable, tableCards=tableCards, 
+                        slots=slots, others=others, discards=discards, p=p, playerWhoHints=playerWhoHints, players=players, discarded=discarded)
+        return 'discard', [cardToDiscard]
+
+    else:
+        print(f"Selecting random rule")
+        return ruleMatch(ruleNum=random.choice(range(0,22)), playerNum=playerNum, hintTable=hintTable, tableCards=tableCards, 
+                        slots=slots, others=others, discards=discards, p=p, playerWhoHints=playerWhoHints, players=players, discarded=discarded)               
 
 def isPlayable(cardNum, cardColor, tableCards) -> bool:
     # print(f"The tableCards at isPlayable is: {tableCards}")
@@ -46,8 +62,8 @@ def findKnown(hint):
 def playIfCertain(playerNum: int, hintTable, tableCards, slots):
     print("playIfCertain Rule")
     for slot in range(slots):
-        val = findKnown(hintTable[slot].values)
-        col = findKnown(hintTable[slot].colors)
+        val = findKnown(hintTable[playerNum][slot].values)
+        col = findKnown(hintTable[playerNum][slot].colors)
 
         if val != None and col != None:
             if(isPlayable(val, col, tableCards)):
@@ -64,14 +80,14 @@ def playIfCertain(playerNum: int, hintTable, tableCards, slots):
 # TODO: handle undirect hint
 # TODO: handle also full known hint
 # Plays a card that is known to be playable(even with partial information)
-def playSafeCard(hintTable, tableCards, slots):
+def playSafeCard(playerNum, hintTable, tableCards, slots):
     print("playSafeCard Rule")
     # for a slot it can be placed, regardless of the color
     cardsNum = []
     for slot in range(slots):
         try:
             # print(list(hintTable[slot].values.values()))
-            possibleCards = list(hintTable[slot].values.values()).index(1)+1
+            possibleCards = list(hintTable[playerNum][slot].values.values()).index(1)+1
             print(
                 f"list comp {[possibleCards==len(tableCards[colorDict[x]])+1 for x in range(5)]}")
             # for x in range(5):
@@ -92,14 +108,14 @@ def playSafeCard(hintTable, tableCards, slots):
 # Plays a card that is known to be playable(even with partial information)
 
 
-def playSafeCard2(hintTable, tableCards, slots, others, discards):
+def playSafeCard2(playerNum, hintTable, tableCards, slots, others, discards):
     print("playSafeCard2 Rule")
     others = [card for cards in others for card in cards]
 
     # for a slot it can be placed, regardless of the color
     cardsNum = []
     for slot in range(slots):
-        prob = calcprob(hintTable[slot], others, discards, tableCards)
+        prob = calcprob(hintTable[playerNum][slot], others, discards, tableCards)
         if(prob == 1):
             return slot
     return None
@@ -189,7 +205,7 @@ def calcprob(hint, others, discards, fireworks):
 # Plays card most likely to be playable if the probability of being
 # playable is greater than p
 
-def playProbablySafeCard(hintTable, fireworks, slots, others, discards, p):
+def playProbablySafeCard(playerNum, hintTable, fireworks, slots, others, discards, p):
     print("playProbablySafeCard Rule")
     # print(
     #     f"cards: {[str(card.value)+card.color for cards in others for card in cards]}")
@@ -198,7 +214,7 @@ def playProbablySafeCard(hintTable, fireworks, slots, others, discards, p):
     probs = []
     for slot in range(slots):
         #print(f"slot n.{slot}:")
-        prob = calcprob(hintTable[slot], others, discards, fireworks)
+        prob = calcprob(hintTable[playerNum][slot], others, discards, fireworks)
 
         #print(f"Final prob for slot{slot}: {prob}\n")
         probs.append(prob)
@@ -328,7 +344,7 @@ def hintOld(hintTable, tableCards,  playerWhoHints, players):
         if found:  # TODO: Test, debug and check
             break
 
-    return p, hint if found else None, 0
+    return (p, hint) if found else (None, 0)
 
 
 # Hints a playable card, randomly chooses between color or value, even if it already partially knows it
@@ -517,11 +533,11 @@ def hintUnkown(hintTable, playerWhoHints, players):
 
 # Discards cards whose pre-requisites have been discarded.
 # Assumption: I need to know the value to know the prerequisite
-def discardUseless(hintTable, discarded, slots):
+def discardUseless(playerNum, hintTable, discarded, slots):
     print("discardUseless Rule")
     for slot in range(slots):
-        val = findKnown(hintTable[slot].values)
-        col = findKnown(hintTable[slot].colors)
+        val = findKnown(hintTable[playerNum][slot].values)
+        col = findKnown(hintTable[playerNum][slot].colors)
         if val != None:
             # value 1 doesn't have prerequisites..
             if val == 1:
@@ -539,12 +555,12 @@ def discardUseless(hintTable, discarded, slots):
 
 
 # Discards that is no longer playable.
-def discardSafe(hintTable, tableCards, slots):
+def discardSafe(playerNum, hintTable, tableCards, slots):
     print("discardSafe Rule")
     safe = False
     for slot in range(slots):
-        val = findKnown(hintTable[slot].values)
-        col = findKnown(hintTable[slot].colors)
+        val = findKnown(hintTable[playerNum][slot].values)
+        col = findKnown(hintTable[playerNum][slot].colors)
 
         if val != None and col == None:
             safe = all([len(tableCards[col]) >= val for col in colorsName])
@@ -556,11 +572,11 @@ def discardSafe(hintTable, tableCards, slots):
 
 
 # Discards a card that is useless or safe.
-def discardUselessSafe(hintTable, tableCards, discarded, slots):
+def discardUselessSafe(playerNum, hintTable, tableCards, discarded, slots):
     print("discardUselessSafe Rule")
     for slot in range(slots):
-        val = findKnown(hintTable[slot].values)
-        col = findKnown(hintTable[slot].colors)
+        val = findKnown(hintTable[playerNum][slot].values)
+        col = findKnown(hintTable[playerNum][slot].colors)
         safe = False
         if val != None:
             # value 1 doesn't have prerequisites..
@@ -582,11 +598,11 @@ def discardUselessSafe(hintTable, tableCards, discarded, slots):
 
 # Discards a card that with fully known information and no longer playable
 # (same as discardSafe but with just fully known information)
-def discardIfCertain(hintTable, tableCards, slots):
+def discardIfCertain(playerNum, hintTable, tableCards, slots):
     print("discardIfCertain Rule")
     for slot in range(slots):
-        val = findKnown(hintTable[slot].values)
-        col = findKnown(hintTable[slot].colors)
+        val = findKnown(hintTable[playerNum][slot].values)
+        col = findKnown(hintTable[playerNum][slot].colors)
         if val != None and col != None:
             if(len(tableCards[col]) >= val):
                 return slot
@@ -595,11 +611,11 @@ def discardIfCertain(hintTable, tableCards, slots):
 # Discards card in hand with highest known value
 
 
-def discardHighest(hintTable, slots):
+def discardHighest(playerNum, hintTable, slots):
     print("discardHighest Rule")
     slotToDiscard = 0
     for slot in range(slots):
-        val = findKnown(hintTable[slot].values)
+        val = findKnown(hintTable[playerNum][slot].values)
         if val == None:
             continue
         if val > slotToDiscard:
@@ -612,13 +628,13 @@ def discardHighest(hintTable, slots):
 # Discards oldest card in hand.
 
 
-def discardOldest(hintTable, slots):
+def discardOldest(playerNum, hintTable, slots):
     print("discardOldest Rule")
     slotToDiscard = 0
     age = 0
     for slot in range(slots):
         if hintTable[slot].age > age:
-            age = hintTable[slot].age
+            age = hintTable[playerNum][slot].age
             slotToDiscard = slot
 
     if slotToDiscard == 0:
@@ -629,12 +645,12 @@ def discardOldest(hintTable, slots):
 
 
 # Discards a card with no known information
-def discardNoInfo(hintTable, slots):
+def discardNoInfo(playerNum, hintTable, slots):
     print("discardNoInfo Rule")
     slotsToDiscard = []
     for slot in range(slots):
-        val = findKnown(hintTable[slot].values)
-        col = findKnown(hintTable[slot].colors)
+        val = findKnown(hintTable[playerNum][slot].values)
+        col = findKnown(hintTable[playerNum][slot].colors)
         if val == None and col == None:
             slotsToDiscard.append(slot)
     if slotsToDiscard:
@@ -645,16 +661,16 @@ def discardNoInfo(hintTable, slots):
 # Discards oldest card with no known information
 
 
-def discardNoInfoOldest(hintTable, slots):
+def discardNoInfoOldest(playerNum, hintTable, slots):
     print("discardOldest Rule")
     slotToDiscard = 0
     age = 0
     for slot in range(slots):
-        val = findKnown(hintTable[slot].values)
-        col = findKnown(hintTable[slot].colors)
+        val = findKnown(hintTable[playerNum][slot].values)
+        col = findKnown(hintTable[playerNum][slot].colors)
         if val == None and col == None:
-            if hintTable[slot].age > age:
-                age = hintTable[slot].age
+            if hintTable[playerNum][slot].age > age:
+                age = hintTable[playerNum][slot].age
                 slotToDiscard = slot
     if slotToDiscard == 0:
         print("discardOldest: No known card to discard")
@@ -663,12 +679,12 @@ def discardNoInfoOldest(hintTable, slots):
         return slotToDiscard
 
 
-def discardLeastLikelyToBeNecessary(hintTable, tableCards, slots, discards):
+def discardLeastLikelyToBeNecessary(playerNum, hintTable, tableCards, slots, discards):
 
     print("discardUselessSafe Rule")
     for slot in range(slots):
-        val = findKnown(hintTable[slot].values)
-        col = findKnown(hintTable[slot].colors)
+        val = findKnown(hintTable[playerNum][slot].values)
+        col = findKnown(hintTable[playerNum][slot].colors)
         safe = False
         # Osawa
         if val != None:
@@ -695,23 +711,28 @@ def discardLeastLikelyToBeNecessary(hintTable, tableCards, slots, discards):
 
 
 # Array of rule functions
-rules = [playIfCertain, playSafeCard, playProbablySafeCard,
-         hintPartiallyKnown, hintOnes, hintUseful]
+rules = [playIfCertain, playSafeCard, playSafeCard2, playProbablySafeCard,
+         hintPartiallyKnown, hintOnes, hintUseful, hintOld, hintPlayable,
+         hintUseless, hintFives, hintMostInfo, hintRandom, hintUnkown,
+         discardUseless, discardSafe, discardUselessSafe, discardIfCertain,
+         discardHighest, discardOldest, discardNoInfo, discardNoInfoOldest,
+         discardLeastLikelyToBeNecessary
+         ]
 
 
-def discardLeastLikelyToBeNecessary(player, hintTable, tableCards, discardedCards):
+def discardLeastLikelyToBeNecessary(playerNum, slots, hintTable, tableCards, discardedCards):
 
     _slots = [s for s in range(slots)]
     necessarySlots = []
     notPlayableSlots = []
 
     for slot in _slots:
-        if(any(el == 1 for el in hintTable[slot].values.values())
-                and any(el == 1 for el in hintTable[slot].colors.values())):
+        if(any(el == 1 for el in hintTable[playerNum][slot].values.values())
+                and any(el == 1 for el in hintTable[playerNum][slot].colors.values())):
             try:
-                cardNum = list(hintTable[slot].values.values()).index(1)+1
+                cardNum = list(hintTable[playerNum][slot].values.values()).index(1)+1
                 cardColor = colorDict[list(
-                    hintTable[slot].colors.values()).index(1)]
+                    hintTable[playerNum][slot].colors.values()).index(1)]
 
                 # Card may be playable in the future
                 if len(tableCards[cardColor]) < cardNum:
