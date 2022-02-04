@@ -15,11 +15,16 @@ CARD_LIMIT = [3, 2, 2, 2, 1]
 
 
 # TODO: Check what happens when number of card is decreasing, some rule could break
-def ruleMatch(ruleNum: int, playerNum: int, hintTable, tableCards, handSize, others, discards, p, playerWhoHints, players, discarded) -> str:
+def ruleMatch(ruleNum: int, playerNum: int, hintTable: list, tableCards: dict, handSize: int, others: list, discards: dict, players: list, usedNoteTokens: int) -> str:
     if ruleNum == None:
         print(f"Selecting random rule")
         ruleNum = random.choice(range(0, 22))
     # returns cardNumber to be used
+    playerToHint = None
+    cardToHint = None
+    cardToPlay = None
+    cardToDiscard = None
+
     if ruleNum < 3:
         if ruleNum == 0:
             # playIfCertain(hintTable, tableCards, handSize)
@@ -29,35 +34,36 @@ def ruleMatch(ruleNum: int, playerNum: int, hintTable, tableCards, handSize, oth
             # playSafeCard(hintTable, tableCards, handSize, others, discards)
             cardToPlay = rules[ruleNum](hintTable[playerNum], tableCards,
                                         handSize, others, discards)
-        else:
+        if ruleNum == 2:
             # playProbablySafeCard(hintTable, tableCards, handSize, others, discards, p)
             cardToPlay = rules[ruleNum](hintTable[playerNum], tableCards,
-                                        handSize, others, discards, p)
+                                        handSize, others, discards, 0.8)
         return 'play', [cardToPlay]
-    elif ruleNum < 13:
-        if ruleNum < 8:
+    elif 2 < ruleNum < 13 and usedNoteTokens < 8:
+        if 2 < ruleNum < 8:
             playerToHint, cardToHint = rules[ruleNum](
-                hintTable, tableCards, playerWhoHints, players)
-        elif ruleNum < 12:
+                hintTable, tableCards, playerNum, players)
+        if 8 < ruleNum < 12:
             playerToHint, cardToHint = rules[ruleNum](
-                hintTable, playerWhoHints, players)
-        else:
-            playerToHint, cardToHint = rules[ruleNum](playerWhoHints, players)
+                hintTable, playerNum, players)
+        if ruleNum == 12:
+            playerToHint, cardToHint = rules[ruleNum](playerNum, players)
 
         return 'hint', [playerToHint, cardToHint]
-    elif ruleNum < 22:
-        if ruleNum < 15:
+    elif 12 < ruleNum < 22 and usedNoteTokens > 0:
+        if 12 < ruleNum < 15:
             cardToDiscard = rules[ruleNum](hintTable[playerNum], tableCards,
                                            discards, handSize)
-        elif ruleNum == 15:
+        if ruleNum == 15:
             cardToDiscard = rules[ruleNum](
                 hintTable[playerNum], discards, handSize)
-        elif ruleNum < 18:
+        if 15 < ruleNum < 18:
             cardToDiscard = rules[ruleNum](
                 hintTable[playerNum], tableCards, handSize)
-        else:
+        if ruleNum > 18:
             cardToDiscard = rules[ruleNum](hintTable[playerNum], handSize)
         return 'discard', [cardToDiscard]
+    return None, None
 
 
 def isPlayable(cardNum, cardColor, tableCards) -> bool:
@@ -219,7 +225,8 @@ def calcprob(hint, others, discards, fireworks):
             num = getNumCards([val], [col], others + discards, fireworks)
             tot = getNumCards(possibleValues, possibleColors,
                               others + discards, fireworks)
-            if tot == 0: tot = 1
+            if tot == 0:
+                tot = 1
 
         # print(
         #     f"\tprob for card {str(value)+color[0].upper()} and slot{numslot}: {num}/{tot}={num/tot}")
@@ -344,9 +351,9 @@ def hintOld(hintTable, tableCards, playerWhoHints, players):
                         continue
         if found:  # TODO: Test, debug and check
             break
-
-    return (p, hint) if found else (None, 0)
-
+    if found:
+        return p, hint
+    return None, 0
 # Hints a playable card, randomly chooses between color or value, even if it already partially knows it
 
 
@@ -683,6 +690,8 @@ def discardUseless(hintTable, discarded, slots):
     return None
 
 # Discards that is no longer playable.
+
+
 def discardSafe(hintTable, tableCards, slots):
     print("discardSafe Rule")
     safe = False
@@ -708,7 +717,9 @@ def discardIfCertain(hintTable, tableCards, slots):
         col = findKnown(hintTable[slot].colors)
         if val != None and col != None:
             if(len(tableCards[col]) >= val):
+                print(f"WOOH: discardIfCertain has found slot {slot}")
                 return slot
+    print("OOPS: discardIfCertain haven't found a shit!")
     return None
 
 
@@ -744,6 +755,8 @@ def discardOldest(hintTable, slots):
         return slotToDiscard
 
 # Discards a card with no known information
+
+
 def discardNoInfo(hintTable, slots):
     print("discardNoInfo Rule")
     slotsToDiscard = []
@@ -781,3 +794,18 @@ rules = [playIfCertain, playSafeCard, playProbablySafeCard,
          hintUseless, hintOnes, hintFives, hintMostInfo, hintUnkown, hintRandom,
          discardUselessSafe, discardLeastLikelyToBeNecessary, discardUseless, discardSafe, discardIfCertain,
          discardHighest, discardOldest, discardNoInfo, discardNoInfoOldest]
+
+
+rules2 = {0: playIfCertain, 1: playSafeCard, 2: playProbablySafeCard,
+          3: hintPartiallyKnown, 4: hintUseful, 5: hintOld,
+          6: hintPlayable, 7: hintUseless, 8: hintOnes,
+          9: hintFives, 10: hintMostInfo, 11: hintUnkown, 12: hintRandom,
+          13: discardUselessSafe,
+          14: discardLeastLikelyToBeNecessary,
+          15: discardUseless,
+          16: discardSafe,
+          17: discardIfCertain,
+          18: discardHighest,
+          19: discardOldest,
+          20: discardNoInfo,
+          21: discardNoInfoOldest}

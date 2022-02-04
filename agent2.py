@@ -112,11 +112,11 @@ def commandShow(playerName: str, s: socket):  # SHOW (just first time)
 def manageHintResponse(data):
     data = GameData.GameData.deserialize(data)
     if type(data) is GameData.ServerHintData:
-        print("Hint type: " + data.type)
-        print("Player " + data.destination +
-              " cards with value " + str(data.value) + " are:")
-        for i in data.positions:
-            print("\t" + str(i))
+        # print("Hint type: " + data.type)
+        # print("Player " + data.destination +
+        #       " cards with value " + str(data.value) + " are:")
+        # for i in data.positions:
+        #     print("\t" + str(i))
         return 1, None
     elif type(data) is GameData.ServerGameOver:
         print("gameover in managehint")
@@ -135,24 +135,24 @@ def manageHintResponse(data):
 def managePlayResponse(data):
     data = GameData.GameData.deserialize(data)
     if type(data) is GameData.ServerPlayerMoveOk:
-        print("Nice move!")
-        print("Current player: " + data.player)
-        print(
-            f"card played: {(data.card).toString()} , card.value: {data.card.value}")
-        # print(f"cardColor: {data.card.color}")
+        # print("Nice move!")
+        # print("Current player: " + data.player)
+        # print(
+        #     f"card played: {(data.card).toString()} , card.value: {data.card.value}")
+        # # print(f"cardColor: {data.card.color}")
         # print(f"lastPlayer: {data.lastPlayer} player: {data.player} handLength: {data.handLength}")
         return 1, None
     if type(data) is GameData.ServerPlayerThunderStrike:
-        print("OH NO! The Gods are unhappy with you!")
-        print(
-            f"card played: {(data.card).toString()} , card.value: {data.card.value}")
+        #     print("OH NO! The Gods are unhappy with you!")
+        #     print(
+        #         f"card played: {(data.card).toString()} , card.value: {data.card.value}")
         return -1, None
     if type(data) is GameData.ServerGameOver:
-        print(data.message)
-        print(data.score)
-        print(data.scoreMessage)
-        stdout.flush()
-        print("Ready for a new game!")
+        # print(data.message)
+        # print(data.score)
+        # print(data.scoreMessage)
+        # stdout.flush()
+        # print("Ready for a new game!")
         return 0, data.score
 
 
@@ -160,11 +160,10 @@ def manageDiscardResponse(data):
     data = GameData.GameData.deserialize(data)
     if type(data) is GameData.ServerActionValid:
         dataOk = True
-        print("Action valid!")
-        print("Current player: " + data.player)
+        # print("Action valid!")
+        # print("Current player: " + data.player)
         return 1, None
     elif type(data) is GameData.ServerGameOver:
-        print("GAMEOVER IN DISCARD SHIT")
         print("Game over!")
         print("Start new game")
         return 0, data.score
@@ -212,17 +211,6 @@ def manageHintTableUpdate(playerNum: int, slotNum: int, hintTable, slots):
     hintTable[playerNum].append(CardHints(slots))
 
 # based on the 5 stacks of cards, says if one card is playable
-
-
-def isPlayable(cardNum, cardColor, tableCards) -> bool:
-    # print(f"The tableCards at isPlayable is: {tableCards}")
-    # print(f"tableCards[cardColor]: {tableCards[cardColor]} , len(tableCards[cardColor]): {len(tableCards[cardColor])}")
-    # print(f"cardNum: {cardNum} , cardColor: {cardColor}")
-    # TODO: Check if its possible that there are empty places in the array that throws the len() calculation
-    if(len(tableCards[cardColor]) == cardNum-1):
-        print("I can play the card")
-        return True
-    return False
 
 
 #########  RULES HERE JUST TO TEST, THEN TO BE MOVED TO rules.py  ###########
@@ -294,7 +282,7 @@ def simulateGames(numPlayers, numGames, rules):
     clientSockets = []
 
     print("start simulation")
-    time.sleep(0.5)
+    time.sleep(1)
     clientSockets = connectClients(numPlayers)
     print("connected")
 
@@ -321,32 +309,35 @@ def simulateGames(numPlayers, numGames, rules):
             playerName = "player" + str(client)
 
             s = clientSockets[client]
-
+            print(f"NumPlayers: {numPlayers}, Game: {endGames}/{numGames}")
             print(f"\nplayer{client},it:{it} \n")
 
             # Before starting, every player is doing show in order to update infos
             game = commandShow(playerName, s)
             players = game.players
             tableCards = game.tableCards
+            others = [p.hand for i, p in enumerate(
+                players) if i != client]
+
+            others = [p.hand for p in players]
 
             # increment all the cards' age in the hand of players by one
             updateCardsAge(hintTable, numPlayers, game.handSize)
-            for r in rulesArray:
-                move, cardInfo = ruleMatch(ruleNum=r, playerNum=client, hintTable=hintTable, tableCards=tableCards,
-                                           handSize=game.handSize, others=(
-                                               [p.hand for i, p in enumerate(players) if i != client]),
-                                           discards=game.discardPile, p=0.8, playerWhoHints=client, players=players, discarded=game.discardPile)
-                if(cardInfo[0] != None):
-                    if move == "hint" and game.usedNoteTokens >= 7:
-                        continue
-                    if move == "discard" and game.usedNoteTokens == 0:
-                        continue
-                    print(cardInfo)
+            good = False
+            rulesArray[2] = 10
+            for i, r in enumerate(rulesArray):
+                print(f"r: {r}(i={i})")
+                move, cardInfo = ruleMatch(r, client, hintTable, tableCards,
+                                           game.handSize, others,
+                                           game.discardPile, game.players, game.usedNoteTokens)
+                if cardInfo != None and cardInfo[0] != None:
+                    good = True
                     break
-
-            handSize = game.handSize
-            print("HANDSIZE: ", game.handSize)
-
+            if not good:
+                print("No rules found :(")
+                move = "discard"
+                cardInfo = [0]
+            assert(type(cardInfo[0] == int))
             # 2. take action
             if move == "play":
 
@@ -397,7 +388,21 @@ def simulateGames(numPlayers, numGames, rules):
                 manageHintResponse(data)
 
                 test = type(GameData.GameData.deserialize(
-                    data) == GameData.ServerGameOver)
+                    data) == GameData.ServerInvalidDataReceived)
+
+                if test:
+                    for p in players:
+                        print(p.name)
+                        for c in p.hand:
+                            print(c.value, c.color)
+                        print()
+                    print()
+                    for p in range(len(players)):
+                        print("player", p)
+                        for slot in range(len(players[p].hand)):
+                            print(hintTable[p][slot])
+                        print()
+                print(f"dest: {dest}, typ: {typ}, value:{value}")
 
                 # HintResponse ACK for the remaining clients
                 for c in range(numPlayers):
@@ -424,9 +429,10 @@ def simulateGames(numPlayers, numGames, rules):
                     data, hintTable, getNumSlots(numPlayers))
 
             elif move == "discard":
-
                 discard = cardInfo[0]
-
+                if(cardInfo[0] == None):
+                    print("what's happenin'?", cardInfo)
+                    os._exit(-1)
                 #discardOrder = 4
                 s.send(GameData.ClientPlayerDiscardCardRequest(
                     playerName, discard).serialize())

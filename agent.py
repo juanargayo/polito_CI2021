@@ -30,16 +30,15 @@ statuses = ["server", "client", "ready", "game"]
 
 # GENETIC SECTION
 
-
 CHROMOSOME_SIZE = 22  # Number of rules
-POPULATION_SIZE = 200
+POPULATION_SIZE = 1
 OFFSPRING_SIZE = int(np.round(CHROMOSOME_SIZE * 1.5))
 MUTATION_RATE = 0.1
 CROSSOVER_RATE = 0.9
 TOURNAMENT_SIZE = 5
 ELITE_SIZE = int(np.round(POPULATION_SIZE * 0.1))
 NUM_GENERATIONS = 500
-GAMES_PER_GEN = 1
+GAMES_PER_GEN = 20
 STEADY_STATE = 1000
 
 
@@ -47,13 +46,14 @@ def evaluate_solution(solution: np.array) -> float:
     # simulate for this solution (this rule order) 20 mirror-games => return avg_score
     numPlayers = [p for p in range(2, 6)]
     score = 0
-
+    start_time = time.time()
     for npl in numPlayers:
         score += simulateGames(npl, GAMES_PER_GEN, solution)
         print("score: " + str(score))
+    print(f"Evaluated in {time.time()-start_time}s")
     avgScore = score/len(numPlayers)
     print(f"Eval: {avgScore}")
-    time.sleep(500)
+    os.exit(0)
     return avgScore
 
 
@@ -122,55 +122,62 @@ def ordxover(p1, p2):
     return off
 
 
-# EVOLUTION
-population = np.tile(np.array(range(CHROMOSOME_SIZE)), (POPULATION_SIZE, 1))
-generations = 1
+def main():
+    # EVOLUTION
+    population = np.tile(np.array(range(CHROMOSOME_SIZE)),
+                         (POPULATION_SIZE, 1))
+    generations = 1
 
-for i in range(POPULATION_SIZE):
-    np.random.shuffle(population[i])
+    population[0] = [7, 8, 9, 10, 11, 12, 1, 20]
+    # for i in range(POPULATION_SIZE):
+    #     np.random.shuffle(population[i])
 
-solution_costs = [evaluate_solution(population[i])
-                  for i in range(POPULATION_SIZE)]
-global_best_solution = population[np.argmax(solution_costs)]
-global_best_fitness = evaluate_solution(global_best_solution)
+    solution_costs = [evaluate_solution(population[i])
+                      for i in range(POPULATION_SIZE)]
+    global_best_solution = population[np.argmax(solution_costs)]
+    global_best_fitness = evaluate_solution(global_best_solution)
 
-history = [(0, global_best_fitness)]
-steady_state = 0
-step = 0
+    history = [(0, global_best_fitness)]
+    steady_state = 0
+    step = 0
 
-while steady_state < STEADY_STATE:
-    step += 1
-    steady_state += 1
-    generations += 1
-    offspring = list()
-    for o in range(OFFSPRING_SIZE // 2):
-        p1, p2 = parent_selection(population), parent_selection(population)
-        offspring.append(inversion(p1))
-        offspring.append(tweak(p2))
-        if steady_state > int(0.6 * STEADY_STATE) and np.random.random() < 0.3:
-            offspring.append(tweak(ordxover(p1, p2)))
-        if steady_state > int(0.6 * STEADY_STATE) and np.random.random() < 0.5:
-            offspring.append(insert(p1))
-    # while len(offspring) < OFFSPRING_SIZE:
-    #     p1 = parent_selection(population)
-    #     offspring.append(tweak(p1))
+    while steady_state < STEADY_STATE:
+        step += 1
+        steady_state += 1
+        generations += 1
+        offspring = list()
+        for o in range(OFFSPRING_SIZE // 2):
+            p1, p2 = parent_selection(population), parent_selection(population)
+            offspring.append(inversion(p1))
+            offspring.append(tweak(p2))
+            if steady_state > int(0.6 * STEADY_STATE) and np.random.random() < 0.3:
+                offspring.append(tweak(ordxover(p1, p2)))
+            if steady_state > int(0.6 * STEADY_STATE) and np.random.random() < 0.5:
+                offspring.append(insert(p1))
+        # while len(offspring) < OFFSPRING_SIZE:
+        #     p1 = parent_selection(population)
+        #     offspring.append(tweak(p1))
 
-    offspring = np.array(offspring)
-    fitness = [evaluate_solution(o) for o in offspring]
-    best_solution = offspring[np.argmax(fitness)]
-    best_fitness = evaluate_solution(best_solution)
+        offspring = np.array(offspring)
+        fitness = [evaluate_solution(o) for o in offspring]
+        best_solution = offspring[np.argmax(fitness)]
+        best_fitness = evaluate_solution(best_solution)
 
-    if best_fitness > global_best_fitness:
-        global_best_solution = best_solution
-        global_best_fitness = best_fitness
-        history.append((step, global_best_fitness))
-        steady_state = 0
+        if best_fitness > global_best_fitness:
+            global_best_solution = best_solution
+            global_best_fitness = best_fitness
+            history.append((step, global_best_fitness))
+            steady_state = 0
 
-    fitness_pop = [evaluate_solution(p) for p in population]
-    elite = np.copy(population[np.argsort(fitness_pop)][:ELITE_SIZE])
-    best_offspring = np.copy(offspring[np.argsort(fitness)][:POPULATION_SIZE -
-                                                            ELITE_SIZE])
-    population = np.concatenate((elite, best_offspring))
+        fitness_pop = [evaluate_solution(p) for p in population]
+        elite = np.copy(population[np.argsort(fitness_pop)][:ELITE_SIZE])
+        best_offspring = np.copy(offspring[np.argsort(fitness)][:POPULATION_SIZE -
+                                                                ELITE_SIZE])
+        population = np.concatenate((elite, best_offspring))
 
-# plot(history)
-print(global_best_solution)
+    # plot(history)
+    print(global_best_solution)
+
+
+if __name__ == "__main__":
+    main()
