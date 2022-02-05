@@ -15,7 +15,7 @@ CARD_LIMIT = [3, 2, 2, 2, 1]
 
 
 # TODO: Check what happens when number of card is decreasing, some rule could break
-def ruleMatch(ruleNum: int, playerNum: int, hintTable: list, tableCards: dict, handSize: int, others: list, discards: dict, players: list, usedNoteTokens: int) -> str:
+def ruleMatch(ruleNum: int, playerNum: int, hintTable: list, tableCards: dict, handSize: int, others: list, discards: list, players: list, usedNoteTokens: int) -> str:
     if ruleNum == None:
         print(f"Selecting random rule")
         ruleNum = random.choice(range(0, 22))

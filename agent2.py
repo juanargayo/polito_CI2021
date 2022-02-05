@@ -258,6 +258,10 @@ def updateTableCards(card, tableCards):
     except AssertionError:
         print(f"ERROR: stack of color: {card.color} has {len(tableCards[card.color])} cards")
 
+def clearTableCards(tableCards):
+    for c in tableCards.keys():
+        tableCards[c].clear()
+
 
 
 def simulateGames(numPlayers, numGames, rules):
@@ -291,7 +295,7 @@ def simulateGames(numPlayers, numGames, rules):
     clientSockets = []
 
     print("start simulation")
-    time.sleep(1)
+    time.sleep(0.1)
     clientSockets = connectClients(numPlayers)
     print("connected")
 
@@ -324,6 +328,7 @@ def simulateGames(numPlayers, numGames, rules):
             # Before starting, every player is doing show in order to update infos
             game = commandShow(playerName, s)
             players = game.players
+            print(f"the TTTableCards are: {tableCards}")
             #tableCards = game.tableCards
             others = [p.hand for i, p in enumerate(
                 players) if i != client]
@@ -362,7 +367,7 @@ def simulateGames(numPlayers, numGames, rules):
                     if c == client:
                         continue
                     data = clientSockets[c].recv(DATASIZE)
-                    resp, score = managePlayResponse(data)
+                    resPl, scorePl = managePlayResponse(data)
                 #print(f"DOPO Play, res[0]: {res[0]}, res[1]: {res[1]}")
                 # This means game ended, so.. restart
                 if res == 0:
@@ -374,6 +379,8 @@ def simulateGames(numPlayers, numGames, rules):
 
                     print("\n"*100)
                     print("Start new game")
+
+                    clearTableCards(tableCards)
 
                     #run = False
                     break
@@ -430,10 +437,14 @@ def simulateGames(numPlayers, numGames, rules):
                     print(f"Score: {score}")
                     hintTableInit(numPlayers, hintTable,
                                   getNumSlots(numPlayers))
+
+                    clearTableCards(tableCards)
+
                     print("\n"*100)
                     print("Start new game")
                     #run = False
                     break
+
 
                 # Hint table update
                 # SICURO CHE VA BENE GETNUMSLOTS????
@@ -472,11 +483,14 @@ def simulateGames(numPlayers, numGames, rules):
                     print("\n"*100)
                     print("Start new game")
 
+                    clearTableCards(tableCards)
+
                     #run = False
                     break
                 # time.sleep(0.6)
             it += 1
             if(endGames == numGames):
+                clearTableCards()
                 run = False
                 break
 
