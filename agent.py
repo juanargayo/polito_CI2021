@@ -1,4 +1,4 @@
-from grpc import server
+#from grpc import server
 import numpy as np
 
 from subprocess import Popen, PIPE, STDOUT
@@ -128,7 +128,7 @@ def main():
                          (POPULATION_SIZE, 1))
     generations = 1
 
-    population[0] = [7, 8, 9, 10, 11, 12, 1, 20]
+    #population[0] = [7, 8, 9, 10, 11, 12, 1, 20]
     # for i in range(POPULATION_SIZE):
     #     np.random.shuffle(population[i])
 
