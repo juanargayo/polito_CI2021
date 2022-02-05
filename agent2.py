@@ -141,7 +141,7 @@ def managePlayResponse(data):
         #     f"card played: {(data.card).toString()} , card.value: {data.card.value}")
         # # print(f"cardColor: {data.card.color}")
         # print(f"lastPlayer: {data.lastPlayer} player: {data.player} handLength: {data.handLength}")
-        return 1, None
+        return 1, data.card
     if type(data) is GameData.ServerPlayerThunderStrike:
         #     print("OH NO! The Gods are unhappy with you!")
         #     print(
@@ -250,6 +250,15 @@ def updateCardsAge(hintTable, numPlayers, slots):
         for slot in range(slots):
             hintTable[p][slot].incrementAge()
 
+def updateTableCards(card, tableCards):
+
+    tableCards[card.color].append(card)
+    try:
+        assert(len(tableCards[card.color]) <= 5)
+    except AssertionError:
+        print(f"ERROR: stack of color: {card.color} has {len(tableCards[card.color])} cards")
+
+
 
 def simulateGames(numPlayers, numGames, rules):
 
@@ -258,14 +267,14 @@ def simulateGames(numPlayers, numGames, rules):
     hintTable = [[0 for x in range(getNumSlots(numPlayers))]
                  for y in range(numPlayers)]        # Array of shape H=[#Players][#Slots]
 
-    tableCards = {}     # dict for storing the stacks of cards on the table
-
     colorDict = {0: 'red', 1: 'yellow', 2: 'green', 3: 'blue', 4: 'white'}
     colorsName = ['red', 'yellow', 'green', 'blue', 'white']
 
     discardedCards = {c: [0, 0, 0, 0, 0] for c in colorsName}
     uselessCards = {c: 0 for c in colorsName}
 
+    tableCards = {c: [] for c in colorsName}     # dict for storing the stacks of cards on the table
+    #tableCards = {}
     # 3 one's for every color, 2 two's, three's and four's, and 1 five's
     CARD_LIMIT = [3, 2, 2, 2, 1]
 
@@ -315,7 +324,7 @@ def simulateGames(numPlayers, numGames, rules):
             # Before starting, every player is doing show in order to update infos
             game = commandShow(playerName, s)
             players = game.players
-            tableCards = game.tableCards
+            #tableCards = game.tableCards
             others = [p.hand for i, p in enumerate(
                 players) if i != client]
 
@@ -338,6 +347,7 @@ def simulateGames(numPlayers, numGames, rules):
                 move = "discard"
                 cardInfo = [0]
             assert(type(cardInfo[0] == int))
+
             # 2. take action
             if move == "play":
 
@@ -345,15 +355,15 @@ def simulateGames(numPlayers, numGames, rules):
                 s.send(GameData.ClientPlayerPlayCardRequest(
                     playerName, cardPos).serialize())
                 data = s.recv(DATASIZE)
-                res = managePlayResponse(data)
+                res, score = managePlayResponse(data)
 
                 # this is just ack for other players...
                 for c in range(numPlayers):
                     if c == client:
                         continue
                     data = clientSockets[c].recv(DATASIZE)
-                    res, score = managePlayResponse(data)
-
+                    resp, score = managePlayResponse(data)
+                #print(f"DOPO Play, res[0]: {res[0]}, res[1]: {res[1]}")
                 # This means game ended, so.. restart
                 if res == 0:
                     print(f"Score: {score}")
@@ -367,6 +377,8 @@ def simulateGames(numPlayers, numGames, rules):
 
                     #run = False
                     break
+                elif res == 1:
+                    updateTableCards(score, tableCards) #In this case, the score is the card object (that was played)
 
                 # shift hint slot when playing a card
                 manageHintTableUpdate(
