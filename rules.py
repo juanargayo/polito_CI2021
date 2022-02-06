@@ -67,48 +67,38 @@ def ruleMatch(ruleNum: int, playerNum: int, hintTable: list, tableCards: dict, h
 
 
 def isPlayable(cardNum, cardColor, tableCards) -> bool:
-    # print(f"The tableCards at isPlayable is: {tableCards}")
-    # print(f"tableCards[cardColor]: {tableCards[cardColor]} , len(tableCards[cardColor]): {len(tableCards[cardColor])}")
-    # print(f"cardNum: {cardNum} , cardColor: {cardColor}")
-    # TODO: Check if its possible that there are empty places in the array that throws the len() calculation
+    """Checks if the current card can be played at the moment. For the given color of the card, goes to the corresponding stack of cards
+        and based on the amount of cards in it, sees if this new card can be placed on top.
+        E.g. amount of cards = 3; card.value = 4 -> Can be placed"""
+
     if(len(tableCards[cardColor]) == cardNum-1):
-        #print("I can play the card")
         return True
     return False
 
-# Function that returns the value or the color of the known value or color if present
-
 
 def findKnown(hint):
+    """Returns the value or color of a card if a hint of it is present in the hintTable passed as an argument"""
     for key, val in hint.items():
         if val == 1:
             return key
     return None
 
-# Plays a card with fully known information that is playable
-
-
 def playIfCertain(hintTable, tableCards, slots):
-    #print("playIfCertain Rule")
+    """Tries to find a card with fully know information (value and color) in the hintTable. Then check if it isPlayable().
+    If it passes this checks, it returns that card."""
     for slot in range(slots):
         val = findKnown(hintTable[slot].values)
         col = findKnown(hintTable[slot].colors)
 
         if val != None and col != None:
             if(isPlayable(val, col, tableCards)):
-                #print("The card is playable")
                 return slot
             else:
-                #print("The card is NOT playable")
                 return None
-        # In this case, we are playing the first playable card
-        # of the player, there maybe more than one, we can make
-        # an array and then by some metric (or random) choose one
-
 
 # TODO: handle undirect hint
 # TODO: handle also full known hint
-# Plays a card that is known to be playable(even with partial information)
+# Plays a card that is known to be playable (even with partial information)
 def playSafeCard2(hintTable, tableCards, slots):
     #print("playSafeCard2 Rule")
     # for a slot it can be placed, regardless of the color
@@ -139,9 +129,8 @@ def playSafeCard2(hintTable, tableCards, slots):
 
 
 def playSafeCard(hintTable, tableCards, slots, others, discards):
-    #print("playSafeCard Rule")
+    """Plays a card that is known to be playable (even with partial information).  """
     others = [card for cards in others for card in cards]
-
     # for a slot it can be placed, regardless of the color
     cardsNum = []
     for slot in range(slots):
@@ -152,12 +141,9 @@ def playSafeCard(hintTable, tableCards, slots, others, discards):
     return None
 
 
-# Return how many cards are still present for that values and that colors in a certain deck. If fireworks is present, the fireworks will be accounted
 def getNumCards(values: list, colors: list, deck, fireworks=None):
-    # print(f"values: {values}")
-    # print(f"colors: {colors}")
-    # print(f"otherCards: {otherCards}")
-    # print(f"fireworks: {fireworks}")
+    """Returns how many cards are still present for that values and that colors in a certain deck.
+        If fireworks is present, the fireworks will be accounted"""
     n = 0
     for v in values:
         for col in colors:
@@ -166,42 +152,12 @@ def getNumCards(values: list, colors: list, deck, fireworks=None):
                      v and c.color == col)
             if fireworks:
                 n -= fireworks[col].count(v)
-    #print(f"TOT: {n}")
     return n
 
 # Prob that card in numslot with that hint is playable
 
-
 def calcprob(hint, others, discards, fireworks):
-    # Test just value hint
-
-    # PARTIALLY KNOWN-2 VALUE+COLOR => Ok
-    # hint.values = {1: 0, 2: -1, 3: 0, 4: -1, 5: -1}
-    # hint.colors = {'red': 0, 'green': 0, 'blue': -1, 'yellow': -1, 'white': -1}
-
-    # PARTIALLY KNOWN-2 VALUE => ok
-    # hint.values = {1: 0, 2: 0, 3: -1, 4: 0, 5: -1}
-    # hint.colors = {'red': 0, 'green': 0, 'blue': 0, 'yellow': 0, 'white': 0}
-
-    # PARTIALLY KNOWN-2 COLOR => ok
-    # hint.values = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
-    # hint.colors = {'red': 0, 'green': 0, 'blue':-1, 'yellow': -1, 'white': -1}
-
-    # PARTIALLY KNOWN-1 VALUE => Final prob: 1.0 in first play => OK
-    # hint.values = {1: 1, 2: -1, 3: -1, 4: -1, 5: -1}
-    # hint.colors = {'red': 0, 'green': 0, 'blue': 0, 'yellow': 0, 'white': 0}
-
-    # PARTIALLY KNOWN-1 COLOR => ok
-    # hint.values = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
-    # hint.colors = {'red': 1, 'green': -1, 'blue': -1, 'yellow': -1, 'white': -1}
-
-    # COMPLETELY KNOWN => OK
-    # hint.values = {1: 1, 2: -1, 3: -1, 4: -1, 5: -1}
-    # hint.colors = {'red': 1, 'green': -1, 'blue': -1, 'yellow': -1, 'white': -1}
-
-    # COMPLETELY UKNOWN
-    # hint.values = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
-    # hint.colors = {'red': 0, 'green': 0, 'blue': 0, 'yellow': 0, 'white': 0}
+    """Calculates the probability of a card in numSlot of being playable, given a certain hint"""
     prob = 0
     for col in fireworks:
         p = 0
@@ -235,22 +191,17 @@ def calcprob(hint, others, discards, fireworks):
     return prob
 
 
-# Plays card most likely to be playable if the probability of being
-# playable is greater than p
+#
 
 def playProbablySafeCard(hintTable, tableCards, slots, others, discards, p):
-    #print("playProbablySafeCard Rule")
-    # print(
-    #     f"cards: {[str(card.value)+card.color for cards in others for card in cards]}")
+    """Plays card most likely to be playable if the probability of being playable is greater than p"""
     others = [card for cards in others for card in cards]
 
     probs = []
     for slot in range(slots):
-        #print(f"slot n.{slot}:")
         prob = calcprob(hintTable[slot],
                         others, discards, tableCards)
 
-        #print(f"Final prob for slot{slot}: {prob}\n")
         probs.append(prob)
     # Put a threshold and if not return false
     return probs.index(max(probs)) if max(probs) > p else None
@@ -259,12 +210,8 @@ def playProbablySafeCard(hintTable, tableCards, slots, others, discards, p):
 #  HINT RULES  #
 # ------------ #
 
-# Tells the missing information (color or value) of a partially known playable card to a player
-
-
 def hintPartiallyKnown(hintTable, tableCards, playerWhoHints, players):
-    #print("hintPartiallyKnown Rule")
-
+    """Tells the missing information (color or value) of a partially known playable card to a player"""
     playersArr = [p for p in range(len(players))]
     playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]
     playersArr.remove(playerWhoHints)
@@ -285,12 +232,9 @@ def hintPartiallyKnown(hintTable, tableCards, playerWhoHints, players):
                     continue
     return None, 0
 
-# Tells a player some new information about one of their playable cards,
-# prioritizing value if card is completely unknown.
-
-
 def hintUseful(hintTable, tableCards, playerWhoHints, players):
-    #print("hintUseful Rule")
+    """Tells a player some new information about one of their playable cards,
+    prioritizing value if card is completely unknown."""
 
     playersArr = [p for p in range(len(players))]
     playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]
@@ -316,11 +260,9 @@ def hintUseful(hintTable, tableCards, playerWhoHints, players):
 
     return None, 0
 
-# Chooses a random player and hints him the oldest card it has
-
 
 def hintOld(hintTable, tableCards, playerWhoHints, players):
-    #print("hintOld Rule")
+    """Chooses a random player and hints him the oldest card it has"""
 
     playersArr = [p for p in range(len(players))]
     playersArr.remove(playerWhoHints)
@@ -349,16 +291,16 @@ def hintOld(hintTable, tableCards, playerWhoHints, players):
                         hint = players[p].hand[slot].color
                     else:
                         continue
-        if found:  # TODO: Test, debug and check
+        if found:
             break
     if found:
         return p, hint
     return None, 0
-# Hints a playable card, randomly chooses between color or value, even if it already partially knows it
 
 
 def hintPlayable(hintTable, tableCards, playerWhoHints, players):
-    #print("hintPlayable Rule")
+    """Hints a playable card, randomly chooses between color or value,
+    even if it already partially knows it"""
 
     playersArr = [p for p in range(len(players))]
     playersArr.remove(playerWhoHints)
@@ -378,11 +320,9 @@ def hintPlayable(hintTable, tableCards, playerWhoHints, players):
 
     return None, 0
 
-# Hints a useless card. A card whoes value is below the stack's top one, for the given color
-
 
 def hintUseless(hintTable, tableCards, playerWhoHints, players):
-    #print("hintUseless Rule")
+    """Hints a useless card. A card who's value is below the stack's (tableCard) top one for the given color"""""
 
     playersArr = [p for p in range(len(players))]
     playersArr.remove(playerWhoHints)
@@ -399,19 +339,17 @@ def hintUseless(hintTable, tableCards, playerWhoHints, players):
                 elif not any(el == 1 for el in hintTable[p][slot].colors.values()):
                     # if the players doesn't know the color, I hint it
                     return p, players[p].hand[slot].color
-    return None, 0  # TODO: Test, debug and check
-
-# Hints cards with value one to the player that has the most of them
+    return None, 0
 
 
 def hintOnes(hintTable, playerWhoHints, players):
-    #print("hintOnes Rule")
+    """Hints cards with value one to the player that has the most of them"""
     playersArr = [p for p in range(len(players))]
     playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]
 
     playersArr.remove(playerWhoHints)
 
-    # FIrst value: player number, Second value: amount of one cards in his hand
+    # First value: player number, Second value: amount of one cards in his hand
     maxOnePlayer = [None, 0]
 
     for p in playersArr:
@@ -430,11 +368,10 @@ def hintOnes(hintTable, playerWhoHints, players):
     else:
         return None, 0  # no player with one-value cards found
 
-# Tells a player about all their cards with value five
-
 
 def hintFives(hintTable, playerWhoHints, players):
-    #print("hintFives Rule")
+    """Tells a player about all their cards with value five"""
+
     playersArr = [p for p in range(len(players))]
     playersArr.remove(playerWhoHints)
     random.shuffle(playersArr)
@@ -451,25 +388,24 @@ def hintFives(hintTable, playerWhoHints, players):
                 fivesCount += 1
         if fivesCount > maxOnePlayer[1]:
             maxOnePlayer[0] = p
-            maxOnePlayer[1] = fivesCount  # TODO: Test, debug and check
+            maxOnePlayer[1] = fivesCount
 
     if maxOnePlayer[1] > 0:
         return maxOnePlayer[0], 5
     else:
         return None, 0  # no player with five-value cards found
 
-# Hint whatever gives the most information to the player
-# TODO: check that in case of error is returned None as player
 
-
-def hintMostInfo2(hintTable, playerWhoHints, players):
-    #print("hintMostInfo Rule")
+def hintMostInfo(hintTable, playerWhoHints, players):
+    """Hint whatever gives the most information to the player. Randomly chooses a player.
+     It searches the hintTable for the least known info of the cards the player has in its hand.
+     Then selects the most repeated information (color or value) and hints it."""
 
     # (given by amount of cards with same color or value)
     playersArr = [p for p in range(len(players))]
     playersArr.remove(playerWhoHints)
     p = random.choice(playersArr)
-    mostVal = [-1, 0]  # PlayerIndex, most information counterCounter
+
     color = {c: 0 for c in colorsName}  # (color name, #repetitions)
     value = {v: 0 for v in range(1, 6)}  # (value, #repetitions)
 
@@ -491,8 +427,8 @@ def hintMostInfo2(hintTable, playerWhoHints, players):
     else:  # TODO: Test, debug and check
         return p, next(iter(sortedValue.keys()))
 
-# Hint whatever gives the most information to the player
 
+# Hint whatever gives the most information to the player
 
 def hintMostInfo(hintTable, playerWhoHints, players):
     #print("hintMostInfo2 Rule")
@@ -520,11 +456,9 @@ def hintMostInfo(hintTable, playerWhoHints, players):
         return p, maxInfo
     return None, None
 
-# Gives new information about a card in a player’s hand.
-
 
 def hintUnkown(hintTable, playerWhoHints, players):
-    #print("hintUnkown Rule")
+    """Hints to a random player unknown information about its cards."""
     playersArr = [p for p in range(len(players))]
     playersArr.remove(playerWhoHints)
     random.shuffle(playersArr)
@@ -550,7 +484,7 @@ def hintUnkown(hintTable, playerWhoHints, players):
 
 
 def hintRandom(playerWhoHints, players):
-    #print("hintRandom Rule")
+    """Give a hint to a random player"""
     playersArr = [p for p in range(len(players))]
     playersArr.remove(playerWhoHints)
     p = random.choice(playersArr)
