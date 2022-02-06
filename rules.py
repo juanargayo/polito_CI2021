@@ -17,7 +17,7 @@ CARD_LIMIT = [3, 2, 2, 2, 1]
 # TODO: Check what happens when number of card is decreasing, some rule could break
 def ruleMatch(ruleNum: int, playerNum: int, hintTable: list, tableCards: dict, handSize: int, others: list, discards: list, players: list, usedNoteTokens: int) -> str:
     if ruleNum == None:
-        print(f"Selecting random rule")
+        #print(f"Selecting random rule")
         ruleNum = random.choice(range(0, 22))
     # returns cardNumber to be used
     playerToHint = None
@@ -89,17 +89,17 @@ def findKnown(hint):
 
 
 def playIfCertain(hintTable, tableCards, slots):
-    print("playIfCertain Rule")
+    #print("playIfCertain Rule")
     for slot in range(slots):
         val = findKnown(hintTable[slot].values)
         col = findKnown(hintTable[slot].colors)
 
         if val != None and col != None:
             if(isPlayable(val, col, tableCards)):
-                print("The card is playable")
+                #print("The card is playable")
                 return slot
             else:
-                print("The card is NOT playable")
+                #print("The card is NOT playable")
                 return None
         # In this case, we are playing the first playable card
         # of the player, there maybe more than one, we can make
@@ -110,7 +110,7 @@ def playIfCertain(hintTable, tableCards, slots):
 # TODO: handle also full known hint
 # Plays a card that is known to be playable(even with partial information)
 def playSafeCard2(hintTable, tableCards, slots):
-    print("playSafeCard2 Rule")
+    #print("playSafeCard2 Rule")
     # for a slot it can be placed, regardless of the color
     cardsNum = []
     for slot in range(slots):
@@ -118,14 +118,14 @@ def playSafeCard2(hintTable, tableCards, slots):
             # print(list(hintTable[slot].values.values()))
             possibleCards = list(
                 hintTable[slot].values.values()).index(1)+1
-            print(
-                f"list comp {[possibleCards==len(tableCards[colorDict[x]])+1 for x in range(5)]}")
-            # for x in range(5):
+            # print(
+            #     f"list comp {[possibleCards==len(tableCards[colorDict[x]])+1 for x in range(5)]}")
+            # # for x in range(5):
             #     print(f"tablecard[{x}]: {tableCards[colorDict[x]]}")
             # print(f"possibleCards-1: {possibleCards-1} ")
             if(all(possibleCards == len(tableCards[colorDict[x]])+1 for x in range(5))):
-                print(
-                    f"possibleCardsFound: {possibleCards} and tableCards: {tableCards}")
+                # print(
+                #     f"possibleCardsFound: {possibleCards} and tableCards: {tableCards}")
                 cardsNum.append(possibleCards)
         except ValueError:
             print(f"No known card value in slot: {slot}")
@@ -139,7 +139,7 @@ def playSafeCard2(hintTable, tableCards, slots):
 
 
 def playSafeCard(hintTable, tableCards, slots, others, discards):
-    print("playSafeCard Rule")
+    #print("playSafeCard Rule")
     others = [card for cards in others for card in cards]
 
     # for a slot it can be placed, regardless of the color
@@ -239,7 +239,7 @@ def calcprob(hint, others, discards, fireworks):
 # playable is greater than p
 
 def playProbablySafeCard(hintTable, tableCards, slots, others, discards, p):
-    print("playProbablySafeCard Rule")
+    #print("playProbablySafeCard Rule")
     # print(
     #     f"cards: {[str(card.value)+card.color for cards in others for card in cards]}")
     others = [card for cards in others for card in cards]
@@ -263,7 +263,7 @@ def playProbablySafeCard(hintTable, tableCards, slots, others, discards, p):
 
 
 def hintPartiallyKnown(hintTable, tableCards, playerWhoHints, players):
-    print("hintPartiallyKnown Rule")
+    #print("hintPartiallyKnown Rule")
 
     playersArr = [p for p in range(len(players))]
     playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]
@@ -290,7 +290,7 @@ def hintPartiallyKnown(hintTable, tableCards, playerWhoHints, players):
 
 
 def hintUseful(hintTable, tableCards, playerWhoHints, players):
-    print("hintUseful Rule")
+    #print("hintUseful Rule")
 
     playersArr = [p for p in range(len(players))]
     playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]
@@ -320,7 +320,7 @@ def hintUseful(hintTable, tableCards, playerWhoHints, players):
 
 
 def hintOld(hintTable, tableCards, playerWhoHints, players):
-    print("hintOld Rule")
+    #print("hintOld Rule")
 
     playersArr = [p for p in range(len(players))]
     playersArr.remove(playerWhoHints)
@@ -358,7 +358,7 @@ def hintOld(hintTable, tableCards, playerWhoHints, players):
 
 
 def hintPlayable(hintTable, tableCards, playerWhoHints, players):
-    print("hintPlayable Rule")
+    #print("hintPlayable Rule")
 
     playersArr = [p for p in range(len(players))]
     playersArr.remove(playerWhoHints)
@@ -382,7 +382,7 @@ def hintPlayable(hintTable, tableCards, playerWhoHints, players):
 
 
 def hintUseless(hintTable, tableCards, playerWhoHints, players):
-    print("hintUseless Rule")
+    #print("hintUseless Rule")
 
     playersArr = [p for p in range(len(players))]
     playersArr.remove(playerWhoHints)
@@ -405,7 +405,7 @@ def hintUseless(hintTable, tableCards, playerWhoHints, players):
 
 
 def hintOnes(hintTable, playerWhoHints, players):
-    print("hintOnes Rule")
+    #print("hintOnes Rule")
     playersArr = [p for p in range(len(players))]
     playersArr = playersArr[playerWhoHints:] + playersArr[:playerWhoHints]
 
@@ -434,7 +434,7 @@ def hintOnes(hintTable, playerWhoHints, players):
 
 
 def hintFives(hintTable, playerWhoHints, players):
-    print("hintFives Rule")
+    #print("hintFives Rule")
     playersArr = [p for p in range(len(players))]
     playersArr.remove(playerWhoHints)
     random.shuffle(playersArr)
@@ -462,8 +462,8 @@ def hintFives(hintTable, playerWhoHints, players):
 # TODO: check that in case of error is returned None as player
 
 
-def hintMostInfo(hintTable, playerWhoHints, players):
-    print("hintMostInfo Rule")
+def hintMostInfo2(hintTable, playerWhoHints, players):
+    #print("hintMostInfo Rule")
 
     # (given by amount of cards with same color or value)
     playersArr = [p for p in range(len(players))]
@@ -494,8 +494,8 @@ def hintMostInfo(hintTable, playerWhoHints, players):
 # Hint whatever gives the most information to the player
 
 
-def hintMostInfo2(hintTable, playerWhoHints, players):
-    print("hintMostInfo2 Rule")
+def hintMostInfo(hintTable, playerWhoHints, players):
+    #print("hintMostInfo2 Rule")
     # (given by amount of cards with same color or value)
     playersArr = [p for p in range(len(players))]
     playersArr.remove(playerWhoHints)
@@ -504,25 +504,27 @@ def hintMostInfo2(hintTable, playerWhoHints, players):
     maxCnt = 0
     maxInfo = None
     for col in colorsName:
-        mi += len([card.value for slot, card in enumerate(players[p].hand)
+        mi = len([card.value for slot, card in enumerate(players[p].hand)
                    if card.color == col and hintTable[p][slot].colors[card.color] == 0])
         if mi > maxCnt:
             maxInfo = col
             maxCnt = mi
     mi = 0
     for v in range(1, 6):
-        mi += len([card.value for slot, card in enumerate(players[p].hand)
+        mi = len([card.value for slot, card in enumerate(players[p].hand)
                    if card.value == v and hintTable[p][slot].values[card.value] == 0])
         if mi > maxCnt:
             maxInfo = v
             maxCnt = mi
-    return p, maxInfo
+    if maxInfo != None:
+        return p, maxInfo
+    return None, None
 
 # Gives new information about a card in a player’s hand.
 
 
 def hintUnkown(hintTable, playerWhoHints, players):
-    print("hintUnkown Rule")
+    #print("hintUnkown Rule")
     playersArr = [p for p in range(len(players))]
     playersArr.remove(playerWhoHints)
     random.shuffle(playersArr)
@@ -548,7 +550,7 @@ def hintUnkown(hintTable, playerWhoHints, players):
 
 
 def hintRandom(playerWhoHints, players):
-    print("hintRandom Rule")
+    #print("hintRandom Rule")
     playersArr = [p for p in range(len(players))]
     playersArr.remove(playerWhoHints)
     p = random.choice(playersArr)
@@ -566,7 +568,9 @@ def hintRandom(playerWhoHints, players):
     randomColor = random.choice(availableColors)
     randomValue = random.choice(availableValues)
 
-    return p, random.choice([randomColor, randomValue])
+    if randomColor and randomValue:
+        return p, random.choice([randomColor, randomValue])
+    return None, 0
 
 
 # --------------- #
@@ -576,7 +580,7 @@ def hintRandom(playerWhoHints, players):
 
 # Discards a card that is useless or safe.
 def discardUselessSafe(hintTable, tableCards, discards, slots):
-    print("discardUselessSafe Rule")
+    #print("discardUselessSafe Rule")
     for slot in range(slots):
         val = findKnown(hintTable[slot].values)
         col = findKnown(hintTable[slot].colors)
@@ -600,7 +604,7 @@ def discardUselessSafe(hintTable, tableCards, discards, slots):
 
 
 def discardLeastLikelyToBeNecessary2(hintTable, tableCards, slots, discards):
-    print("discardLeastLikelyToBeNecessary Rule")
+    #print("discardLeastLikelyToBeNecessary Rule")
     for slot in range(slots):
         val = findKnown(hintTable[slot].values)
         col = findKnown(hintTable[slot].colors)
@@ -670,7 +674,7 @@ def discardLeastLikelyToBeNecessary(handSize, hintTable, tableCards, discardedCa
 
 
 def discardUseless(hintTable, discarded, slots):
-    print("discardUseless Rule")
+    #print("discardUseless Rule")
     for slot in range(slots):
         val = findKnown(hintTable[slot].values)
         col = findKnown(hintTable[slot].colors)
@@ -693,7 +697,7 @@ def discardUseless(hintTable, discarded, slots):
 
 
 def discardSafe(hintTable, tableCards, slots):
-    print("discardSafe Rule")
+    #print("discardSafe Rule")
     safe = False
     for slot in range(slots):
         val = findKnown(hintTable[slot].values)
@@ -711,21 +715,21 @@ def discardSafe(hintTable, tableCards, slots):
 
 
 def discardIfCertain(hintTable, tableCards, slots):
-    print("discardIfCertain Rule")
+    #print("discardIfCertain Rule")
     for slot in range(slots):
         val = findKnown(hintTable[slot].values)
         col = findKnown(hintTable[slot].colors)
         if val != None and col != None:
             if(len(tableCards[col]) >= val):
-                print(f"WOOH: discardIfCertain has found slot {slot}")
+                #print(f"WOOH: discardIfCertain has found slot {slot}")
                 return slot
-    print("OOPS: discardIfCertain haven't found a shit!")
+    #print("OOPS: discardIfCertain haven't found a shit!")
     return None
 
 
 # Discards card in hand with highest known value
 def discardHighest(hintTable, slots):
-    print("discardHighest Rule")
+    #print("discardHighest Rule")
     slotToDiscard = None
     highestValue = 0
     for slot in range(slots):
@@ -740,16 +744,16 @@ def discardHighest(hintTable, slots):
 
 
 def discardOldest(hintTable, slots):
-    print("discardOldest Rule")
-    slotToDiscard = 0
+    #print("discardOldest Rule")
+    slotToDiscard = None
     age = 0
     for slot in range(slots):
         if hintTable[slot].age > age:
             age = hintTable[slot].age
             slotToDiscard = slot
 
-    if slotToDiscard == 0:
-        print("discardOldest: No known card to discard")
+    if slotToDiscard == None:
+        #print("discardOldest: No known card to discard")
         return None
     else:
         return slotToDiscard
@@ -758,7 +762,7 @@ def discardOldest(hintTable, slots):
 
 
 def discardNoInfo(hintTable, slots):
-    print("discardNoInfo Rule")
+    #print("discardNoInfo Rule")
     slotsToDiscard = []
     for slot in range(slots):
         val = findKnown(hintTable[slot].values)
@@ -771,8 +775,8 @@ def discardNoInfo(hintTable, slots):
 
 
 def discardNoInfoOldest(hintTable, slots):
-    print("discardOldest Rule")
-    slotToDiscard = 0
+    #print("discardOldest Rule")
+    slotToDiscard = None
     age = 0
     for slot in range(slots):
         val = findKnown(hintTable[slot].values)
@@ -781,8 +785,8 @@ def discardNoInfoOldest(hintTable, slots):
             if hintTable[slot].age > age:
                 age = hintTable[slot].age
                 slotToDiscard = slot
-    if slotToDiscard == 0:
-        print("discardOldest: No known card to discard")
+    if slotToDiscard == None:
+        #print("discardOldest: No known card to discard")
         return None
     else:
         return slotToDiscard

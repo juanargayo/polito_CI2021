@@ -8,6 +8,7 @@ import signal
 import os
 
 from agent2 import simulateGames
+from agent3 import simulateGames2
 
 # GAME SECTION
 
@@ -31,14 +32,14 @@ statuses = ["server", "client", "ready", "game"]
 # GENETIC SECTION
 
 CHROMOSOME_SIZE = 22  # Number of rules
-POPULATION_SIZE = 1
-OFFSPRING_SIZE = int(np.round(CHROMOSOME_SIZE * 1.5))
+POPULATION_SIZE = 10
+OFFSPRING_SIZE = 5 #int(np.round(CHROMOSOME_SIZE * 1.5))
 MUTATION_RATE = 0.1
 CROSSOVER_RATE = 0.9
 TOURNAMENT_SIZE = 5
 ELITE_SIZE = int(np.round(POPULATION_SIZE * 0.1))
-NUM_GENERATIONS = 500
-GAMES_PER_GEN = 20
+NUM_GENERATIONS = 50
+GAMES_PER_GEN = 1
 STEADY_STATE = 1000
 
 
@@ -48,12 +49,10 @@ def evaluate_solution(solution: np.array) -> float:
     score = 0
     start_time = time.time()
     for npl in numPlayers:
-        score += simulateGames(npl, GAMES_PER_GEN, solution)
-        print("score: " + str(score))
-    print(f"Evaluated in {time.time()-start_time}s")
+        score += simulateGames2(npl, GAMES_PER_GEN, solution)
+        #print(f"Evaluated in {time.time()-start_time}s")
     avgScore = score/len(numPlayers)
-    print(f"Eval: {avgScore}")
-    os.exit(0)
+    #print(f"Eval: {avgScore}")
     return avgScore
 
 
@@ -64,7 +63,7 @@ def parent_selection(population):
                                               len(population),
                                               size=(TOURNAMENT_SIZE, ))]
     fitness = np.array([evaluate_solution(p) for p in tournament])
-    return np.copy(tournament[fitness.argmax])
+    return np.copy(tournament[np.argmax(fitness)])
 
 
 def tweak(solution: np.array, *, pm: float = 1 / CHROMOSOME_SIZE) -> np.array:
@@ -124,24 +123,28 @@ def ordxover(p1, p2):
 
 def main():
     # EVOLUTION
+    start = time.time()
     population = np.tile(np.array(range(CHROMOSOME_SIZE)),
                          (POPULATION_SIZE, 1))
     generations = 1
 
     #population[0] = [7, 8, 9, 10, 11, 12, 1, 20]
-    # for i in range(POPULATION_SIZE):
-    #     np.random.shuffle(population[i])
+    for i in range(POPULATION_SIZE):
+        np.random.shuffle(population[i])
 
     solution_costs = [evaluate_solution(population[i])
                       for i in range(POPULATION_SIZE)]
     global_best_solution = population[np.argmax(solution_costs)]
-    global_best_fitness = evaluate_solution(global_best_solution)
+    global_best_fitness = solution_costs[np.argmax(solution_costs)]
+    print("BEST SOLUTION",global_best_solution)
+    print("BEST SCORE", global_best_fitness)
 
     history = [(0, global_best_fitness)]
     steady_state = 0
     step = 0
 
     while steady_state < STEADY_STATE:
+        print(f"generation n.{generations}")
         step += 1
         steady_state += 1
         generations += 1
@@ -162,18 +165,22 @@ def main():
         fitness = [evaluate_solution(o) for o in offspring]
         best_solution = offspring[np.argmax(fitness)]
         best_fitness = evaluate_solution(best_solution)
-
+        
         if best_fitness > global_best_fitness:
             global_best_solution = best_solution
             global_best_fitness = best_fitness
+            print("BEST SOLUTION",global_best_solution)
+            print("BEST SCORE", global_best_fitness)
             history.append((step, global_best_fitness))
             steady_state = 0
+            
 
         fitness_pop = [evaluate_solution(p) for p in population]
         elite = np.copy(population[np.argsort(fitness_pop)][:ELITE_SIZE])
         best_offspring = np.copy(offspring[np.argsort(fitness)][:POPULATION_SIZE -
                                                                 ELITE_SIZE])
         population = np.concatenate((elite, best_offspring))
+        
 
     # plot(history)
     print(global_best_solution)

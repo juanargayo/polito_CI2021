@@ -490,11 +490,10 @@ def simulateGames(numPlayers, numGames, rules):
                 # time.sleep(0.6)
             it += 1
             if(endGames == numGames):
-                clearTableCards()
+                clearTableCards(tableCards)
                 run = False
                 break
 
     logfile.flush()
     server_proc.terminate()
-    server_proc.wait(0.2)
     return totScore/endGames
