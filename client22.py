@@ -35,10 +35,11 @@ hintState = ("", "")
 rules = [1, 17, 15, 0, 3, 2, 20, 5, 7, 8, 10, 12, 4, 11, 19, 18, 9, 13, 14, 16, 6, 21]
 
 myTurn = False
-SHOW_SECONDS = 10
+SHOW_SECONDS = 1.5
 def manageInput(s: socket):
     global run
     global status
+    global myTurn
 
     command = input()
     if command=="ready":
@@ -139,7 +140,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         if type(data) is GameData.ServerGameStateData:
             dataOk = True
             print("Current player: " + data.currentPlayer)
-            if(data.currentPlayer == "playerName"):
+            if(data.currentPlayer == playerName):
                 myTurn = True
             """ print("Player hands: ")
             for p in data.players:
