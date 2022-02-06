@@ -1,15 +1,9 @@
 from ast import Break
-import collections
 from distutils.log import debug
 from os import stat
 import os
-import random
-import socket
-from subprocess import Popen, PIPE
 from sys import stdout
 from threading import Thread
-from unittest.result import STDOUT_LINE
-from xmlrpc.client import Boolean
 import numpy as np
 from numpy import nancumsum
 import GameData
@@ -48,11 +42,7 @@ def manageHintResponse(world, playerName, dest, typ, value, hintTable, handSize)
     data = world.satisfyRequest(rqst, playerName)
     data = data[1]
     if type(data) is GameData.ServerHintData:
-        # print("Hint type: " + data.type)
-        # print("Player " + data.destination +
-        #       " cards with value " + str(data.value) + " are:")
-        # for i in data.positions:
-        #     print("\t" + str(i))
+
         manageHintTableHintUpdate(data, hintTable, handSize)
         return 1, None
     elif type(data) is GameData.ServerGameOver:
@@ -69,24 +59,11 @@ def managePlay(world, playerName, cardPos):
     data = world.satisfyRequest(rqst, playerName)
     data = data[1]
     if type(data) is GameData.ServerPlayerMoveOk:
-        # print("Nice move!")
-        # print("Current player: " + data.player)
-        # print(
-        #     f"card played: {(data.card).toString()} , card.value: {data.card.value}")
-        # # print(f"cardColor: {data.card.color}")
-        # print(f"lastPlayer: {data.lastPlayer} player: {data.player} handLength: {data.handLength}")
         return 1, data.card
     if type(data) is GameData.ServerPlayerThunderStrike:
-        #     print("OH NO! The Gods are unhappy with you!")
-        #     print(
-        #         f"card played: {(data.card).toString()} , card.value: {data.card.value}")
+
         return -1, None
     if type(data) is GameData.ServerGameOver:
-        # print(data.message)
-        # print(data.score)
-        # print(data.scoreMessage)
-        # stdout.flush()
-        # print("Ready for a new game!")
         return 0, data.score
 
 
@@ -193,11 +170,10 @@ def simulateGames2(numPlayers, numGames, rules):
     uselessCards = {c: 0 for c in colorsName}
 
     tableCards = {c: [] for c in colorsName}     # dict for storing the stacks of cards on the table
-    #tableCards = {}
+
     # 3 one's for every color, 2 two's, three's and four's, and 1 five's
     CARD_LIMIT = [3, 2, 2, 2, 1]
 
-    
     world = Game()
 
     addPlayers(world, numPlayers)
@@ -210,9 +186,6 @@ def simulateGames2(numPlayers, numGames, rules):
     # init HintTable => will be updated on hint or play or discard
     hintTableInit(numPlayers, hintTable, numslots[numPlayers])
 
-    # rulesArray = [r for r in range(0, 21)]
-    # random.shuffle(rulesArray)
-
     rulesArray = rules
     
     # START GAME
@@ -223,7 +196,6 @@ def simulateGames2(numPlayers, numGames, rules):
     while run:
         for client in range(numPlayers):
             playerName = "player" + str(client)
-
 
             # Before starting, every player is doing show in order to update infos
             game = commandShow(world, playerName)
@@ -258,8 +230,6 @@ def simulateGames2(numPlayers, numGames, rules):
             # 2. take action
             if move == "play":
                 cardPos = cardInfo[0]
-
-            
                 
                 res, score = managePlay(world, playerName, cardPos)
 
@@ -321,7 +291,6 @@ def simulateGames2(numPlayers, numGames, rules):
                 manageHintTableUpdate(
                     client, cardPos, hintTable, game.handSize)
                 
-                # time.sleep(0.6)
             it += 1
             if(endGames == numGames):
                 run = False

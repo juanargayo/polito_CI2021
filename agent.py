@@ -6,8 +6,9 @@ import threading
 import time
 import signal
 import os
+from matplotlib import pyplot as plt
 
-from agent2 import simulateGames
+from agent2 import hintTableInit, simulateGames
 from agent3 import simulateGames2
 
 # GAME SECTION
@@ -31,16 +32,16 @@ statuses = ["server", "client", "ready", "game"]
 
 # GENETIC SECTION
 
-CHROMOSOME_SIZE = 22  # Number of rules
-POPULATION_SIZE = 10
+CHROMOSOME_SIZE = 23  # Number of rules
+POPULATION_SIZE = 20
 OFFSPRING_SIZE = 5 #int(np.round(CHROMOSOME_SIZE * 1.5))
-MUTATION_RATE = 0.1
-CROSSOVER_RATE = 0.9
-TOURNAMENT_SIZE = 5
+MUTATION_RATE = 0.4     #0.1
+CROSSOVER_RATE = 0.9    #0.9
+TOURNAMENT_SIZE = 10
 ELITE_SIZE = int(np.round(POPULATION_SIZE * 0.1))
-NUM_GENERATIONS = 50
-GAMES_PER_GEN = 1
-STEADY_STATE = 1000
+NUM_GENERATIONS = 20
+GAMES_PER_GEN = 4
+STEADY_STATE = 30
 
 
 def evaluate_solution(solution: np.array) -> float:
@@ -50,7 +51,7 @@ def evaluate_solution(solution: np.array) -> float:
     start_time = time.time()
     for npl in numPlayers:
         score += simulateGames2(npl, GAMES_PER_GEN, solution)
-        #print(f"Evaluated in {time.time()-start_time}s")
+        #rint(f"Evaluated in {time.time()-start_time}s")
     avgScore = score/len(numPlayers)
     #print(f"Eval: {avgScore}")
     return avgScore
@@ -125,10 +126,10 @@ def main():
     # EVOLUTION
     start = time.time()
     population = np.tile(np.array(range(CHROMOSOME_SIZE)),
-                         (POPULATION_SIZE, 1))
+                      (POPULATION_SIZE, 1))
+
     generations = 1
 
-    #population[0] = [7, 8, 9, 10, 11, 12, 1, 20]
     for i in range(POPULATION_SIZE):
         np.random.shuffle(population[i])
 
@@ -139,7 +140,8 @@ def main():
     print("BEST SOLUTION",global_best_solution)
     print("BEST SCORE", global_best_fitness)
 
-    history = [(0, global_best_fitness)]
+    history = list()
+    history.append((0, global_best_fitness))
     steady_state = 0
     step = 0
 
@@ -153,9 +155,9 @@ def main():
             p1, p2 = parent_selection(population), parent_selection(population)
             offspring.append(inversion(p1))
             offspring.append(tweak(p2))
-            if steady_state > int(0.6 * STEADY_STATE) and np.random.random() < 0.3:
+            if steady_state > int(0.5 * STEADY_STATE) and np.random.random() < CROSSOVER_RATE:
                 offspring.append(tweak(ordxover(p1, p2)))
-            if steady_state > int(0.6 * STEADY_STATE) and np.random.random() < 0.5:
+            if steady_state > int(0.4 * STEADY_STATE) and np.random.random() < MUTATION_RATE:
                 offspring.append(insert(p1))
         # while len(offspring) < OFFSPRING_SIZE:
         #     p1 = parent_selection(population)
@@ -180,9 +182,11 @@ def main():
         best_offspring = np.copy(offspring[np.argsort(fitness)][:POPULATION_SIZE -
                                                                 ELITE_SIZE])
         population = np.concatenate((elite, best_offspring))
+    
+    history = np.array(history)
         
-
-    # plot(history)
+    plt.plot(history[:, 0], history[:, 1], marker=".")
+    plt.show()
     print(global_best_solution)
 
 
