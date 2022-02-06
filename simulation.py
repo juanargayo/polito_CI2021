@@ -72,13 +72,8 @@ def manageDiscardResponse(world, playerName, cardPos):
     data = world.satisfyRequest(rqst, playerName)
     data = data[1]
     if type(data) is GameData.ServerActionValid:
-        dataOk = True
-        # print("Action valid!")
-        # print("Current player: " + data.player)
         return 1, None
     elif type(data) is GameData.ServerGameOver:
-        # print("Game over!")
-        # print("Start new game")
         return 0, data.score
     else:
         print("Some error occurred with discard... this should not happen")
@@ -86,8 +81,6 @@ def manageDiscardResponse(world, playerName, cardPos):
         os._exit(-1)
 
 # Function that updates the HintTable after an Hint
-
-
 def manageHintTableHintUpdate(data, hintTable, slots):
     for i in range(slots):
         if i in data.positions:
@@ -110,23 +103,9 @@ def manageHintTableHintUpdate(data, hintTable, slots):
                 print("ERROR: Wrong hint type")
 
 # Function that updates the HintTable after a play or a discard
-
-
 def manageHintTableUpdate(playerNum: int, slotNum: int, hintTable, slots):
-
-    # for s in range(slotNum, slots-1):
-    #     hintTable[playerNum][s] = hintTable[playerNum][s+1]
-    # s += 1
-    # hintTable[playerNum][s] = CardHints(slots)
-
     hintTable[playerNum].pop(slotNum)
     hintTable[playerNum].append(CardHints(slots))
-
-# based on the 5 stacks of cards, says if one card is playable
-
-
-#########  RULES HERE JUST TO TEST, THEN TO BE MOVED TO rules.py  ###########
-
 
 
 def hintTableInit(numPlayers, hintTable, slots):
@@ -155,24 +134,20 @@ def clearTableCards(tableCards):
 
 
 
-def simulateGames2(numPlayers, numGames, rules):
-    start = time.time()
+#Function that simulates numGames of numPlayers that are playing with following the rules
+def simulateGames(numPlayers, numGames, rules):
     numslots = {1: 5, 2: 5, 3: 5, 4: 4, 5: 4}
 
     run = True
     hintTable = [[0 for x in range(numslots[numPlayers])]
                  for y in range(numPlayers)]        # Array of shape H=[#Players][#Slots]
 
-    colorDict = {0: 'red', 1: 'yellow', 2: 'green', 3: 'blue', 4: 'white'}
     colorsName = ['red', 'yellow', 'green', 'blue', 'white']
 
-    discardedCards = {c: [0, 0, 0, 0, 0] for c in colorsName}
-    uselessCards = {c: 0 for c in colorsName}
+    
 
     tableCards = {c: [] for c in colorsName}     # dict for storing the stacks of cards on the table
 
-    # 3 one's for every color, 2 two's, three's and four's, and 1 five's
-    CARD_LIMIT = [3, 2, 2, 2, 1]
 
     world = Game()
 

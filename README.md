@@ -1,50 +1,34 @@
 # Computational Intelligence 2021-2022
 
 Exam of computational intelligence 2021 - 2022. It requires teaching the client to play the game of Hanabi (rules can be found [here](https://www.spillehulen.dk/media/102616/hanabi-card-game-rules.pdf)).
+The idea was to develop a genetic algorithm in order to evolve a rule-based agent. We tried to reproduce the results obtained in this paper https://arxiv.org/abs/1809.09764
+The description of the idea is the following: "develop a genetic algorithm that builds rule-
+based agents by determining the best sequence of rules from a fixed rule set to use as strategy" 
 
-## Server
+## Agent
 
-The server accepts passing objects provided in GameData.py back and forth to the clients.
-Each object has a `serialize()` and a `deserialize(data: str)` method that must be used to pass the data between server and client.
+The agent cointained in file agent.py is a working client that implements the best sequence of rules that we have found till now.
 
-Watch out! I'd suggest to keep everything in the same folder, since serialization looks dependent on the import path (thanks Paolo Rabino for letting me know).
-
-Server closes when no client is connected.
-
-To start the server:
+To start the agent:
 
 ```bash
-python server.py <minNumPlayers>
+python3 agent.py <IP> <port> <PlayerName>
 ```
 
-Arguments:
+Commands for agent:
 
-- minNumPlayers, **optional**: game does not start until a minimum number of player has been reached. Default = 2
+- ready: set the status to ready
 
-Commands for server:
+After it's ready the agent.py will start to run automatically, playing every time a legal move. It can plays several matches.
 
-- exit: exit from the server
+## Genetic
 
-## Client
+In the file genetic.py is implemented a very basic genetic algorithm. The values of the different genetic parameters were been chosen based on the
+suggestions in the paper.
 
-To start the server:
+## Simulation
 
-```bash
-python client.py <IP> <port> <PlayerName>
-```
-
-Arguments:
-
-- IP: IP address of the server (for localhost: 127.0.0.1)
-- port: server TCP port (default: 1024)
-- PlayerName: the name of the player
-
-Commands for client:
-
-- exit: exit from the game
-- ready: set your status to ready (lobby only)
-- show: show cards
-- hint \<type> \<destinatary>:
-  - type: 'color' or 'value'
-  - destinatary: name of the person you want to ask the hint to
-- discard \<num>: discard the card _num_ (\[0-4]) from your hand
+In the file simulation.py is present the function SimulateGames that is used by the genetic algorithm, in order to evaluate the sequence of rules.
+Basically the simulation is just creating an instance of the class Game, and is simulating nGames, where every player is playing with the same list of
+rules. When a rule is not appliable, the agent will choose the next one available. If no rule is applied, the agent will play the first card available.
+After the execution of nGames, this function is returning the average score.

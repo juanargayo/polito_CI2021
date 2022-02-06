@@ -1,194 +1,273 @@
-#from grpc import server
-import numpy as np
+#!/usr/bin/env python3
 
-from subprocess import Popen, PIPE, STDOUT
-import threading
-import time
-import signal
+from re import M
+import site
+from sys import argv, stdout
+from threading import Thread
+import GameData
+import socket
+from agent2 import hintTableInit, manageHintTableHintUpdate, manageHintTableUpdate, updateCardsAge
+from constants import *
 import os
-from matplotlib import pyplot as plt
+import time
 
-from agent2 import hintTableInit, simulateGames
-from agent3 import simulateGames2
-
-# GAME SECTION
-
-# Evaluation
-
-statuses = ["server", "client", "ready", "game"]
+from rules import ruleMatch
 
 
-# --##--##--##-- NOTES ##--##--##--##--##-##--##--
+if len(argv) < 4:
+    #exit(-1)
+    playerName = "AntoJuan" # For debug
+    ip = HOST
+    port = PORT
+else:
+    playerName = argv[3]
+    ip = argv[1]
+    port = int(argv[2])
 
-# For Mirror-play -> each agent plays with copies of himself for n games, where for each game,
-# they play the 4 game sizes. Thus, the fitness is the average of 4n games
+run = True
 
-# after running the algorithm for 500 generations we took the agents corresponding to the 10 best performing
-# chromosomes and ran a second round of simulations.
+statuses = ["Lobby", "Game", "GameHint"]
 
-
-# --##--##--##--##--##--##--##--##--##--##--##--
-
-
-# GENETIC SECTION
-
-CHROMOSOME_SIZE = 23  # Number of rules
-POPULATION_SIZE = 20
-OFFSPRING_SIZE = 5 #int(np.round(CHROMOSOME_SIZE * 1.5))
-MUTATION_RATE = 0.4     #0.1
-CROSSOVER_RATE = 0.9    #0.9
-TOURNAMENT_SIZE = 10
-ELITE_SIZE = int(np.round(POPULATION_SIZE * 0.1))
-NUM_GENERATIONS = 20
-GAMES_PER_GEN = 4
-STEADY_STATE = 30
+status = statuses[0]
 
 
-def evaluate_solution(solution: np.array) -> float:
-    # simulate for this solution (this rule order) 20 mirror-games => return avg_score
-    numPlayers = [p for p in range(2, 6)]
-    score = 0
-    start_time = time.time()
-    for npl in numPlayers:
-        score += simulateGames2(npl, GAMES_PER_GEN, solution)
-        #rint(f"Evaluated in {time.time()-start_time}s")
-    avgScore = score/len(numPlayers)
-    #print(f"Eval: {avgScore}")
-    return avgScore
+RULES = [1, 17, 15, 0, 3, 2, 20, 5, 7, 8, 10, 12, 4, 11, 19, 18, 9, 13, 14, 16, 6, 21]
 
+myTurn = False
+infos = None
 
-# MUTATIONS
+WAIT_SECONDS = 3
 
-def parent_selection(population):
-    tournament = population[np.random.randint(0,
-                                              len(population),
-                                              size=(TOURNAMENT_SIZE, ))]
-    fitness = np.array([evaluate_solution(p) for p in tournament])
-    return np.copy(tournament[np.argmax(fitness)])
+numslots = {1: 5, 2: 5, 3: 5, 4: 4, 5: 4}
 
+firstShow = True
+hintTable = [[]]
+clientId = -1
+numPlayers = 0
+playerNames = {}
 
-def tweak(solution: np.array, *, pm: float = 1 / CHROMOSOME_SIZE) -> np.array:
-    new_solution = solution.copy()
-    p = None
-    while p is None or p < pm:
-        i1 = np.random.randint(0, CHROMOSOME_SIZE)
-        i2 = np.random.randint(0, CHROMOSOME_SIZE)
-        temp = new_solution[i1]
-        new_solution[i1] = new_solution[i2]
-        new_solution[i2] = temp
-        p = np.random.random()
-    return new_solution
+def manageInput(s: socket):
+    global run
+    global status
+    global myTurn
+    global infos
+    global hintTable
+    global clientId
+    global numPlayers
+    global playerNames
 
+    command = ""
+    while(command != "ready"):
+        command = input()
+        if command=="ready":
+            s.send(GameData.ClientPlayerStartRequest(playerName).serialize())
+            status = statuses[1]
+        else:
+            print("Maybe you wanted to type \"ready\"?")
 
-def inversion(solution: np.array, *, pm: float = 1 / CHROMOSOME_SIZE) -> np.array:
-    new_solution = solution.copy()
-    p = np.random.random()
-    if p < pm:
-        i1 = np.random.randint(0, CHROMOSOME_SIZE)
-        i2 = np.random.randint(0, CHROMOSOME_SIZE)
-        if i1 > i2:
-            i2, i1 = i1, i2
-        to_invert = solution[i1:i2 + 1]
-        if len(to_invert) > 0:
-            if i1 == 0:
-                new_solution[i2::-1] = to_invert
+    it = 0
+    while run:
+
+        if it == 0 and firstShow:
+            command = "show"
+        else:
+            command = "wait"
+        if(myTurn):
+            print("Mmmm, let me think a move...")
+            s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
+            time.sleep(1)
+            others = [p.hand for p in infos.players]
+            updateCardsAge(hintTable, numPlayers, infos.handSize)
+
+            #Now choose move
+            good = False
+
+            for r in RULES:
+                move, cardInfo = ruleMatch(r, clientId, hintTable, infos.tableCards,
+                                           infos.handSize, others,
+                                           infos.discardPile, infos.players, infos.usedNoteTokens)
+                if cardInfo != None and cardInfo[0] != None:
+                    good = True
+                    break
+            if not good:
+                print("No rules found :(")
+                move = "discard"
+                cardInfo = [0]
+
+            #take action
+            if move == "play":
+                cardPos = cardInfo[0]
+                command = "play " + str(cardPos)
+
+            elif move == "hint":
+                typ = 'color' if type(cardInfo[1]) == str else 'value'
+                dest = infos.players[cardInfo[0]].name
+                value = cardInfo[1]
+                command = f"hint {typ} {dest} {value}"
+
+            elif move == "discard":
+                cardPos = cardInfo[0]
+                command = "discard " + str(cardPos)
+
             else:
-                new_solution[i2:i1 - 1:-1] = to_invert
-    return new_solution
-
-
-def insert(solution: np.array, *, pm: float = 1 / CHROMOSOME_SIZE) -> np.array:
-    new_solution = solution.copy()
-    p = np.random.random()
-    if p < pm:
-        i1 = np.random.randint(0, CHROMOSOME_SIZE)
-        i2 = np.random.randint(0, CHROMOSOME_SIZE)
-        if i1 > i2:
-            i2, i1 = i1, i2
-        to_move = solution[i1 + 1:i2]
-        if len(to_move) > 0:
-            new_solution[i1 + 1] = solution[i2]
-            new_solution[i1 + 2:i2 + 1] = to_move
-    return new_solution
-
-
-def ordxover(p1, p2):
-    i1, i2 = int(np.random.random() * len(p1)), int(np.random.random() *
-                                                    len(p2))
-    start, end = min(i1, i2), max(i1, i2)
-    off_p1 = np.array(p1[start:end + 1])
-    off_p2 = np.array([item for item in p2 if item not in off_p1])
-    off = np.concatenate((off_p1, off_p2))
-    return off
-
-
-def main():
-    # EVOLUTION
-    start = time.time()
-    population = np.tile(np.array(range(CHROMOSOME_SIZE)),
-                      (POPULATION_SIZE, 1))
-
-    generations = 1
-
-    for i in range(POPULATION_SIZE):
-        np.random.shuffle(population[i])
-
-    solution_costs = [evaluate_solution(population[i])
-                      for i in range(POPULATION_SIZE)]
-    global_best_solution = population[np.argmax(solution_costs)]
-    global_best_fitness = solution_costs[np.argmax(solution_costs)]
-    print("BEST SOLUTION",global_best_solution)
-    print("BEST SCORE", global_best_fitness)
-
-    history = list()
-    history.append((0, global_best_fitness))
-    steady_state = 0
-    step = 0
-
-    while steady_state < STEADY_STATE:
-        print(f"generation n.{generations}")
-        step += 1
-        steady_state += 1
-        generations += 1
-        offspring = list()
-        for o in range(OFFSPRING_SIZE // 2):
-            p1, p2 = parent_selection(population), parent_selection(population)
-            offspring.append(inversion(p1))
-            offspring.append(tweak(p2))
-            if steady_state > int(0.5 * STEADY_STATE) and np.random.random() < CROSSOVER_RATE:
-                offspring.append(tweak(ordxover(p1, p2)))
-            if steady_state > int(0.4 * STEADY_STATE) and np.random.random() < MUTATION_RATE:
-                offspring.append(insert(p1))
-        # while len(offspring) < OFFSPRING_SIZE:
-        #     p1 = parent_selection(population)
-        #     offspring.append(tweak(p1))
-
-        offspring = np.array(offspring)
-        fitness = [evaluate_solution(o) for o in offspring]
-        best_solution = offspring[np.argmax(fitness)]
-        best_fitness = evaluate_solution(best_solution)
+                "Something is wrong... returning"
+                os._exit(-1)
         
-        if best_fitness > global_best_fitness:
-            global_best_solution = best_solution
-            global_best_fitness = best_fitness
-            print("BEST SOLUTION",global_best_solution)
-            print("BEST SCORE", global_best_fitness)
-            history.append((step, global_best_fitness))
-            steady_state = 0
+        if command == "show" and status == statuses[1]:
+            s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
+        elif command.split(" ")[0] == "discard" and status == statuses[1]:
+            try:
+                cardStr = command.split(" ")
+                cardOrder = int(cardStr[1])
+                s.send(GameData.ClientPlayerDiscardCardRequest(playerName, cardOrder).serialize())
+                myTurn = False
+            except:
+                print("Maybe you wanted to type 'discard <num>'?")
+                continue
+        elif command.split(" ")[0] == "play" and status == statuses[1]:
+            try:
+                cardStr = command.split(" ")
+                cardOrder = int(cardStr[1])
+                s.send(GameData.ClientPlayerPlayCardRequest(playerName, cardOrder).serialize())
+                myTurn = False
+
+            except:
+                print("Maybe you wanted to type 'play <num>'?")
+                continue
+        elif command.split(" ")[0] == "hint" and status == statuses[1]:
+            try:
+                destination = command.split(" ")[2]
+                t = command.split(" ")[1].lower()
+                if t != "colour" and t != "color" and t != "value":
+                    print("Error: type can be 'color' or 'value'")
+                    continue
+                value = command.split(" ")[3].lower()
+                if t == "value":
+                    value = int(value)
+                    if int(value) > 5 or int(value) < 1:
+                        print("Error: card values can range from 1 to 5")
+                        continue
+                else:
+                    if value not in ["green", "red", "blue", "yellow", "white"]:
+                        print("Error: card color can only be green, red, blue, yellow or white")
+                        continue
+                s.send(GameData.ClientHintData(playerName, destination, t, value).serialize())
+                myTurn = False
             
+            except:
+                print("Maybe you wanted to type 'hint <type> <destinatary> <value>'?")
+                continue
+        elif command == "":
+            print("[" + playerName + " - " + status + "]: ", end="")
+        elif command == "wait":
+            print("waiting for my turn...")
+            time.sleep(WAIT_SECONDS)
+            continue
+        else:
+            print("Unknown command: " + command)
+            continue
+        it += 1
+        stdout.flush()
 
-        fitness_pop = [evaluate_solution(p) for p in population]
-        elite = np.copy(population[np.argsort(fitness_pop)][:ELITE_SIZE])
-        best_offspring = np.copy(offspring[np.argsort(fitness)][:POPULATION_SIZE -
-                                                                ELITE_SIZE])
-        population = np.concatenate((elite, best_offspring))
-    
-    history = np.array(history)
-        
-    plt.plot(history[:, 0], history[:, 1], marker=".")
-    plt.show()
-    print(global_best_solution)
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    request = GameData.ClientPlayerAddData(playerName)
+    s.connect((HOST, PORT))
+    s.send(request.serialize())
+    data = s.recv(DATASIZE)
+    data = GameData.GameData.deserialize(data)
+    if type(data) is GameData.ServerPlayerConnectionOk:
+        print("Connection accepted by the server. Welcome " + playerName)
+    print("[" + playerName + " - " + status + "]: ", end="")
+
+    Thread(target=manageInput, args = (s, )).start()
+    while run:
+        dataOk = False
+        data = s.recv(DATASIZE)
+        if not data:
+            continue
+        data = GameData.GameData.deserialize(data)
+        if type(data) is GameData.ServerPlayerStartRequestAccepted:
+            dataOk = True
+            print("Ready: " + str(data.acceptedStartRequests) + "/"  + str(data.connectedPlayers) + " players")
+            data = s.recv(DATASIZE)
+            data = GameData.GameData.deserialize(data)
+        if type(data) is GameData.ServerStartGameData:
+            dataOk = True
+            print("Game start!")
+            s.send(GameData.ClientPlayerReadyData(playerName).serialize())
+            status = statuses[1]
+        if type(data) is GameData.ServerGameStateData:
+            dataOk = True
+            if firstShow:
+                print("Current player: " + data.currentPlayer)
+                infos = data
+                numPlayers = len(data.players)
+                playerNames = {p.name: i for i, p in enumerate(data.players)}
+                clientId = playerNames[playerName]
+                hintTable = [[0 for x in range(numslots[numPlayers])]
+                 for y in range(numPlayers)]        # Array of shape H=[#Players][#Slots]
+                hintTableInit(numPlayers, hintTable, numslots[numPlayers])
+                firstShow = False            
+            if(data.currentPlayer == playerName):
+                myTurn = True
+                infos = data
+                
+        if type(data) is GameData.ServerActionInvalid:
+            dataOk = True
+            print("Invalid action performed. Reason:")
+            print(data.message)
+        if type(data) is GameData.ServerActionValid:
+            dataOk = True
+            print("Action valid!")
+            myTurn = False
+            print("Current player: " + data.player)
+            id = playerNames[data.lastPlayer]
+            manageHintTableUpdate(
+                    id, data.cardHandIndex, hintTable, data.handLength)
+            if(data.player == playerName):
+                myTurn = True
+        if type(data) is GameData.ServerPlayerMoveOk:
+            id = playerNames[data.lastPlayer]
+            manageHintTableUpdate(
+                    id, data.cardHandIndex, hintTable, data.handLength)
+            dataOk = True
+            print("Nice move!")
+            print("Current player: " + data.player)
+            if(data.player == playerName):
+                myTurn = True
+            
+        if type(data) is GameData.ServerPlayerThunderStrike:
+            dataOk = True
+            myTurn = False
+            print("OH NO! The Gods are unhappy with you!")
+            if(data.player == playerName):
+                myTurn = True
+        if type(data) is GameData.ServerHintData:
+            dataOk = True
+            print("Hint type: " + data.type)
+            print("Player " + data.destination + " cards with value " + str(data.value) + " are:")
+            destId = playerNames[data.destination]
+            for i in data.positions:
+                print("\t" + str(i))
+            myTurn = False
+            manageHintTableHintUpdate(
+                    data, hintTable, numslots[numPlayers], destId )
+        if type(data) is GameData.ServerInvalidDataReceived:
+            dataOk = True
+            print(data.data)
+        if type(data) is GameData.ServerGameOver:
+            dataOk = True
+            print(data.message)
+            print(data.score)
+            print(data.scoreMessage)
+            stdout.flush()
+            hintTableInit(numPlayers, hintTable, numslots[numPlayers])
 
 
-if __name__ == "__main__":
-    main()
+            myTurn = False
+            #run = False
+            print("Ready for a new game!")
+        if not dataOk:
+            print("Unknown or unimplemented data type: " +  str(type(data)))
+        print("[" + playerName + " - " + status + "]: ", end="")
+        stdout.flush()

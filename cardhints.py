@@ -1,6 +1,9 @@
 import numpy as np
 
 
+#Class needed to keep info about hint.
+#In values we have a dict with every possible values : {1:0, 2:0, 3:0, 4:0, 5:0}
+# => every value can have 0 (No info), 1 (that card has that value), -1 (that card doesn't have value)
 class CardHints:
 
     colors = ['red', 'yellow', 'green', 'blue', 'white']

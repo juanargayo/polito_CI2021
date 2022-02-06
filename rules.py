@@ -1,12 +1,6 @@
 
-from ast import If, arguments
-from audioop import mul
 import collections
-from decimal import ROUND_HALF_DOWN
 import random
-#from agent2 import CARD_LIMIT
-from game import Card
-import time
 
 colorDict = {0: 'red', 1: 'yellow', 2: 'green', 3: 'blue', 4: 'white'}
 colorsName = ['red', 'yellow', 'green', 'blue', 'white']
