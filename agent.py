@@ -6,7 +6,7 @@ from sys import argv, stdout
 from threading import Thread
 import GameData
 import socket
-from agent2 import hintTableInit, manageHintTableHintUpdate, manageHintTableUpdate, updateCardsAge
+from simulation import hintTableInit, manageHintTableHintUpdate, manageHintTableUpdate, updateCardsAge
 from constants import *
 import os
 import time

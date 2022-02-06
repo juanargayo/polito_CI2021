@@ -32,15 +32,15 @@ statuses = ["server", "client", "ready", "game"]
 # GENETIC SECTION
 
 CHROMOSOME_SIZE = 23  # Number of rules
-POPULATION_SIZE = 20
-OFFSPRING_SIZE = 5 #int(np.round(CHROMOSOME_SIZE * 1.5))
-MUTATION_RATE = 0.4     #0.1
-CROSSOVER_RATE = 0.9    #0.9
+POPULATION_SIZE = 25
+OFFSPRING_SIZE = 30 #int(np.round(CHROMOSOME_SIZE * 1.5))
+MUTATION_RATE = 0.2     #0.1
+CROSSOVER_RATE = 0.8    #0.9
 TOURNAMENT_SIZE = 10
 ELITE_SIZE = int(np.round(POPULATION_SIZE * 0.1))
-NUM_GENERATIONS = 20
-GAMES_PER_GEN = 4
-STEADY_STATE = 30
+NUM_GENERATIONS = 50
+GAMES_PER_GEN = 20
+STEADY_STATE = 1000
 
 
 def evaluate_solution(solution: np.array) -> float:
@@ -145,7 +145,7 @@ def main():
     step = 0
 
     while steady_state < STEADY_STATE:
-        #print(f"generation n.{generations}")
+        print(f"generation n.{generations}")
         step += 1
         steady_state += 1
         generations += 1
@@ -187,6 +187,7 @@ def main():
     plt.plot(history[:, 0], history[:, 1], marker=".")
     plt.show()
     print(global_best_solution)
+    print(global_best_fitness)
 
 
 if __name__ == "__main__":
