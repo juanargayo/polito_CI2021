@@ -21,10 +21,6 @@ Commands for agent:
 
 After it's ready the agent.py will start to run automatically, playing every time a legal move. It can plays several matches.
 
-## Genetic
-
-In the file genetic.py is implemented a very basic genetic algorithm. The values of the different genetic parameters were been chosen based on the
-suggestions in the paper.
 
 ## Simulation
 
